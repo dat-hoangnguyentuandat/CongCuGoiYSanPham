@@ -1,0 +1,133 @@
+﻿@page
+@model RegisterModel
+@{
+    ViewData["Title"] = "Đăng ký";
+}
+
+<div class="min-vh-100 d-flex align-items-center bg-light">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-5 col-md-7">
+                <div class="card shadow-lg border-0 rounded-lg">
+                    <div class="card-header bg-primary text-white text-center py-4">
+                        <h3 class="mb-0">
+                            <i class="fas fa-user-plus me-2"></i>
+                            Tạo tài khoản mới
+                        </h3>
+                        <p class="mb-0 mt-2 opacity-75">Tham gia cùng chúng tôi ngay hôm nay</p>
+                    </div>
+                    <div class="card-body p-4">
+                        <form id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post">
+                            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                            
+                            <div class="form-floating mb-3">
+                                <input asp-for="Input.FullName" class="form-control" autocomplete="name" aria-required="true" placeholder="Họ và tên" />
+                                <label asp-for="Input.FullName">
+                                    <i class="fas fa-user me-2"></i>Họ và tên
+                                </label>
+                                <span asp-validation-for="Input.FullName" class="text-danger"></span>
+                            </div>
+                            
+                            <div class="form-floating mb-3">
+                                <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="Email" />
+                                <label asp-for="Input.Email">
+                                    <i class="fas fa-envelope me-2"></i>Email
+                                </label>
+                                <span asp-validation-for="Input.Email" class="text-danger"></span>
+                            </div>
+                            
+                            <div class="form-floating mb-3">
+                                <input asp-for="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="Mật khẩu" />
+                                <label asp-for="Input.Password">
+                                    <i class="fas fa-lock me-2"></i>Mật khẩu
+                                </label>
+                                <span asp-validation-for="Input.Password" class="text-danger"></span>
+                            </div>
+                            
+                            <div class="form-floating mb-3">
+                                <input asp-for="Input.ConfirmPassword" class="form-control" autocomplete="new-password" aria-required="true" placeholder="Xác nhận mật khẩu" />
+                                <label asp-for="Input.ConfirmPassword">
+                                    <i class="fas fa-lock me-2"></i>Xác nhận mật khẩu
+                                </label>
+                                <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
+                            </div>
+                            
+                            <div class="form-floating mb-4">
+                                <input asp-for="Input.Address" class="form-control" autocomplete="address" placeholder="Địa chỉ" />
+                                <label asp-for="Input.Address">
+                                    <i class="fas fa-map-marker-alt me-2"></i>Địa chỉ (Tùy chọn)
+                                </label>
+                                <span asp-validation-for="Input.Address" class="text-danger"></span>
+                            </div>
+                            
+                            <div class="d-grid mb-3">
+                                <button id="registerSubmit" type="submit" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-user-plus me-2"></i>Đăng ký
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <div class="text-center">
+                            <p class="text-muted mb-0">
+                                Đã có tài khoản? 
+                                <a href="/Identity/Account/Login" class="text-decoration-none fw-bold">
+                                    Đăng nhập ngay
+                                </a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Back to Home -->
+                <div class="text-center mt-3">
+                    <a href="/" class="text-muted text-decoration-none">
+                        <i class="fas fa-arrow-left me-2"></i>Quay về trang chủ
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .min-vh-100 {
+        min-height: 100vh;
+    }
+    
+    .card {
+        transition: transform 0.2s ease-in-out;
+    }
+    
+    .card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .form-floating > label {
+        padding-left: 1rem;
+    }
+    
+    .form-control:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .bg-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    }
+</style>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
