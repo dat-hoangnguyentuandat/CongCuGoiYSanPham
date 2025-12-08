@@ -1,0 +1,560 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Shop</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm">
+            <div class="container">
+                <a class="navbar-brand fw-bold text-primary" asp-area="" asp-controller="Home" asp-action="Index">
+                    🛍️ Shop
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">
+                                Trang chủ
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-area="" asp-controller="Products" asp-action="Index">
+                                Sản phẩm
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-area="" asp-controller="Orders" asp-action="Index">
+                                Đơn hàng
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-area="" asp-controller="Reviews" asp-action="Index">
+                                Đánh giá
+                            </a>
+                        </li>
+                    </ul>
+                    <ul class="navbar-nav">
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-danger fw-bold" href="/Admin/DashboardView">
+                                    Quản trị
+                                </a>
+                            </li>
+                        }
+                        <li class="nav-item">
+                            <a class="nav-link position-relative" asp-area="" asp-controller="Cart" asp-action="Index">
+                                🛒 Giỏ hàng
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="cartCount">
+                                    0
+                                </span>
+                            </a>
+                        </li>
+                        <partial name="_LoginPartial" />
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+    <div class="container">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <!-- Floating Chat Widget -->
+    <div id="chatWidget" class="chat-widget">
+        <div id="chatToggle" class="chat-toggle" onclick="toggleChat()">
+            <i class="fas fa-comments"></i>
+            <span class="chat-badge" id="chatBadge">Hỗ trợ trực tuyến</span>
+        </div>
+        
+        <div id="chatWindow" class="chat-window">
+            <div class="chat-header">
+                <div class="d-flex align-items-center">
+                    <div class="chat-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="ms-2">
+                        <h6 class="mb-0 text-white">AI Tư vấn</h6>
+                        <small class="text-white-50">Trực tuyến</small>
+                    </div>
+                </div>
+                <button class="btn-close-chat" onclick="toggleChat()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="chat-body" id="chatBody">
+                <div class="chat-message ai-message">
+                    <div class="message-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="message-content">
+                        <p>Xin chào! Tôi là trợ lý AI của cửa hàng. Tôi có thể giúp bạn tìm kiếm sản phẩm phù hợp. Bạn đang tìm kiếm gì?</p>
+                        <small class="message-time">Vừa xong</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chat-footer">
+                <div class="input-group">
+                    <input type="text" id="chatInput" class="form-control" placeholder="Nhập tin nhắn..." onkeypress="handleChatKeyPress(event)">
+                    <button class="btn btn-primary" onclick="sendChatMessage()">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+                <div id="chatLoading" class="chat-loading" style="display: none;">
+                    <div class="typing-indicator">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                    <small class="text-muted ms-2">AI đang trả lời...</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer bg-dark text-light mt-5 py-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <h5 class="fw-bold mb-3">
+                        🛍️ Shop
+                    </h5>
+                    <p class="text-light-50">Nơi mua sắm trực tuyến uy tín với hàng ngàn sản phẩm chất lượng cao. Chúng tôi cam kết mang đến trải nghiệm mua sắm tốt nhất cho khách hàng.</p>
+                    <div class="social-links">
+                        <a href="#" class="text-light me-3">📘 Facebook</a>
+                        <a href="#" class="text-light me-3">📷 Instagram</a>
+                        <a href="#" class="text-light">🐦 Twitter</a>
+                    </div>
+                </div>
+                <div class="col-md-2 mb-4">
+                    <h6 class="fw-bold mb-3">Sản phẩm</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="/Products" class="text-light-50 text-decoration-none">Tất cả sản phẩm</a></li>
+                        <li class="mb-2"><a href="/Products" class="text-light-50 text-decoration-none">Sản phẩm mới</a></li>
+                        <li class="mb-2"><a href="/Products" class="text-light-50 text-decoration-none">Khuyến mãi</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-2 mb-4">
+                    <h6 class="fw-bold mb-3">Dịch vụ</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="/Orders" class="text-light-50 text-decoration-none">Đơn hàng</a></li>
+                        <li class="mb-2"><a href="/Reviews" class="text-light-50 text-decoration-none">Đánh giá</a></li>
+                        <li class="mb-2"><a href="#" class="text-light-50 text-decoration-none">Hỗ trợ</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-2 mb-4">
+                    <h6 class="fw-bold mb-3">Chính sách</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="#" class="text-light-50 text-decoration-none">Điều khoản</a></li>
+                        <li class="mb-2"><a href="#" class="text-light-50 text-decoration-none">Bảo mật</a></li>
+                        <li class="mb-2"><a href="#" class="text-light-50 text-decoration-none">Đổi trả</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-2 mb-4">
+                    <h6 class="fw-bold mb-3">Liên hệ</h6>
+                    <div class="contact-info">
+                        <p class="mb-2 text-light-50">📞 1900-xxxx</p>
+                        <p class="mb-2 text-light-50">✉️ support@shop.com</p>
+                        <p class="mb-2 text-light-50">📍 TP. Hồ CHí Minh, Việt Nam</p>
+                    </div>
+                </div>
+            </div>
+            <hr class="my-4 border-secondary">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <p class="mb-0 text-light-50">&copy; 2025 Shop. Tất cả quyền được bảo lưu.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+    
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    
+    <style>
+        .text-light-50 {
+            color: rgba(255, 255, 255, 0.7) !important;
+        }
+        
+        .text-light-50:hover {
+            color: rgba(255, 255, 255, 1) !important;
+        }
+        
+        .social-links a {
+            transition: all 0.3s ease;
+        }
+        
+        .social-links a:hover {
+            transform: translateY(-2px);
+        }
+        
+        .navbar-brand {
+            font-size: 1.5rem;
+        }
+        
+        .nav-link {
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-link:hover {
+            color: #667eea !important;
+        }
+        
+        .text-primary {
+            color: #667eea !important;
+        }
+        
+        /* Chat Widget Styles */
+        .chat-widget {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .chat-toggle {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border-radius: 50px;
+            padding: 15px 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(40, 167, 69, 0.4);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            max-width: 200px;
+        }
+        
+        .chat-toggle:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(40, 167, 69, 0.5);
+        }
+        
+        .chat-toggle i {
+            font-size: 20px;
+        }
+        
+        .chat-badge {
+            font-size: 14px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        
+        .chat-window {
+            position: absolute;
+            bottom: 70px;
+            right: 0;
+            width: 350px;
+            height: 500px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .chat-header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .chat-avatar {
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn-close-chat {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+        
+        .btn-close-chat:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .chat-body {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+        
+        .chat-message {
+            display: flex;
+            margin-bottom: 15px;
+            align-items: flex-start;
+        }
+        
+        .chat-message.user-message {
+            flex-direction: row-reverse;
+        }
+        
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        
+        .ai-message .message-avatar {
+            background: #28a745;
+            color: white;
+        }
+        
+        .user-message .message-avatar {
+            background: #007bff;
+            color: white;
+        }
+        
+        .message-content {
+            max-width: 70%;
+            margin: 0 10px;
+        }
+        
+        .ai-message .message-content {
+            background: white;
+            border-radius: 15px 15px 15px 5px;
+            padding: 12px 15px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .user-message .message-content {
+            background: #007bff;
+            color: white;
+            border-radius: 15px 15px 5px 15px;
+            padding: 12px 15px;
+        }
+        
+        .message-content p {
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        
+        .message-time {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 5px;
+            display: block;
+        }
+        
+        .chat-footer {
+            padding: 15px 20px;
+            background: white;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .chat-footer .form-control {
+            border-radius: 25px;
+            border: 1px solid #dee2e6;
+            padding: 10px 15px;
+        }
+        
+        .chat-footer .btn {
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .chat-loading {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+        }
+        
+        .typing-indicator {
+            display: flex;
+            gap: 3px;
+        }
+        
+        .typing-indicator span {
+            width: 6px;
+            height: 6px;
+            background: #28a745;
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+        
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        
+        @@keyframes typing {
+            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+        
+        @@media (max-width: 768px) {
+            .chat-window {
+                width: 300px;
+                height: 450px;
+            }
+            
+            .chat-toggle {
+                padding: 12px 16px;
+            }
+            
+            .chat-badge {
+                display: none;
+            }
+        }
+    </style>
+    
+    <script>
+        // Update cart count on page load
+        function updateCartCount() {
+            @if (User.Identity.IsAuthenticated)
+            {
+                <text>
+                fetch('/api/cart', {
+                    credentials: 'include'
+                })
+                .then(r => r.ok ? r.json() : null)
+                .then(cart => {
+                    if (cart) {
+                        document.getElementById('cartCount').textContent = cart.totalItems || 0;
+                    }
+                })
+                .catch(() => {});
+                </text>
+            }
+        }
+        
+        // Initialize
+        updateCartCount();
+        
+        // Chat Widget Functions
+        let chatOpen = false;
+        
+        function toggleChat() {
+            const chatWindow = document.getElementById('chatWindow');
+            const chatToggle = document.getElementById('chatToggle');
+            
+            chatOpen = !chatOpen;
+            
+            if (chatOpen) {
+                chatWindow.style.display = 'flex';
+                chatToggle.style.transform = 'scale(0.9)';
+            } else {
+                chatWindow.style.display = 'none';
+                chatToggle.style.transform = 'scale(1)';
+            }
+        }
+        
+        function handleChatKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendChatMessage();
+            }
+        }
+        
+        async function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // Add user message
+            addChatMessage('user', message);
+            input.value = '';
+            
+            // Show loading
+            showChatLoading(true);
+            
+            try {
+                const response = await fetch('/api/ai/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: message })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    addChatMessage('ai', data.aiResponse);
+                } else {
+                    addChatMessage('ai', 'Xin lỗi, tôi đang gặp một số vấn đề kỹ thuật. Vui lòng thử lại sau.');
+                }
+            } catch (error) {
+                console.error('Chat error:', error);
+                addChatMessage('ai', 'Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau.');
+            } finally {
+                showChatLoading(false);
+            }
+        }
+        
+        function addChatMessage(sender, message) {
+            const chatBody = document.getElementById('chatBody');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${sender}-message`;
+            
+            const isUser = sender === 'user';
+            const avatar = isUser ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
+            const time = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+            
+            messageDiv.innerHTML = `
+                <div class="message-avatar">
+                    ${avatar}
+                </div>
+                <div class="message-content">
+                    <p>${message}</p>
+                    <small class="message-time">${time}</small>
+                </div>
+            `;
+            
+            chatBody.appendChild(messageDiv);
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+        
+        function showChatLoading(show) {
+            const loading = document.getElementById('chatLoading');
+            loading.style.display = show ? 'flex' : 'none';
+            
+            if (show) {
+                const chatBody = document.getElementById('chatBody');
+                chatBody.scrollTop = chatBody.scrollHeight;
+            }
+        }
+    </script>
+    
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
