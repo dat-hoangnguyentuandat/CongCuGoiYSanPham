@@ -1,0 +1,351 @@
+@{
+    ViewData["Title"] = "Quản lý tồn kho";
+}
+
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Quản lý tồn kho</h1>
+        <div>
+            <button class="btn btn-warning" onclick="loadLowStockItems()">
+                <i class="fas fa-exclamation-triangle"></i> Hàng sắp hết
+            </button>
+            <button class="btn btn-success" onclick="showBulkRestockModal()">
+                <i class="fas fa-boxes"></i> Nhập kho hàng loạt
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Tổng sản phẩm</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalProducts">0</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-boxes fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Sắp hết hàng</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="lowStockCount">0</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Tổng tồn kho</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalStock">0</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-warehouse fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Giá trị tồn kho</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalValue">0đ</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">Danh sách tồn kho</h6>
+            <div>
+                <input type="text" class="form-control form-control-sm" id="searchInput" placeholder="Tìm kiếm..." style="width: 200px; display: inline-block;">
+                <select class="form-control form-control-sm ml-2" id="statusFilter" style="width: 150px; display: inline-block;">
+                    <option value="">Tất cả</option>
+                    <option value="In Stock">Còn hàng</option>
+                    <option value="Low Stock">Sắp hết</option>
+                    <option value="Out of Stock">Hết hàng</option>
+                </select>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="inventoryTable">
+                    <thead>
+                        <tr>
+                            <th>Sản phẩm</th>
+                            <th>SKU</th>
+                            <th>Tồn kho</th>
+                            <th>Mức tối thiểu</th>
+                            <th>Trạng thái</th>
+                            <th>Lần nhập cuối</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Restock Modal -->
+<div class="modal fade" id="restockModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nhập kho</h5>
+                <button type="button" class="close" onclick="closeModal()" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="restockForm">
+                    <input type="hidden" id="variantId">
+                    <div class="form-group">
+                        <label>Sản phẩm</label>
+                        <input type="text" class="form-control" id="productInfo" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Tồn kho hiện tại</label>
+                        <input type="number" class="form-control" id="currentStock" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Số lượng nhập *</label>
+                        <input type="number" class="form-control" id="restockQuantity" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Ghi chú</label>
+                        <textarea class="form-control" id="restockNotes" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Hủy</button>
+                <button type="button" class="btn btn-success" onclick="processRestock()">Nhập kho</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let allInventory = [];
+
+        async function loadInventory() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/inventory', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load inventory');
+                }
+                
+                allInventory = await response.json();
+                displayInventory(allInventory);
+                updateStats();
+            } catch (error) {
+                console.error('Error loading inventory:', error);
+                document.querySelector('#inventoryTable tbody').innerHTML = 
+                    '<tr><td colspan="7" class="text-center text-danger">Lỗi khi tải dữ liệu tồn kho</td></tr>';
+            }
+        }
+
+        function displayInventory(inventory) {
+            const tbody = document.querySelector('#inventoryTable tbody');
+            tbody.innerHTML = inventory.map(item => `
+                <tr class="${getRowClass(item.status)}">
+                    <td>
+                        <strong>${item.productName}</strong><br>
+                        <small class="text-muted">${item.sku}</small>
+                    </td>
+                    <td><code>${item.sku}</code></td>
+                    <td>
+                        <span class="badge badge-${getQuantityBadge(item.quantity, item.reorderLevel)} badge-lg">
+                            ${item.quantity}
+                        </span>
+                    </td>
+                    <td>${item.reorderLevel}</td>
+                    <td>
+                        <span class="badge badge-${getStatusBadge(item.status)}">
+                            ${getStatusText(item.status)}
+                        </span>
+                    </td>
+                    <td>
+                        <small>${new Date(item.lastRestockedAt).toLocaleDateString('vi-VN')}</small>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-success" onclick="showRestockModal(${item.variantId}, '${item.productName}', '${item.sku}', ${item.quantity})">
+                            <i class="fas fa-plus"></i> Nhập kho
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function updateStats() {
+            const totalProducts = allInventory.length;
+            const lowStockCount = allInventory.filter(item => item.status === 'Low Stock').length;
+            const totalStock = allInventory.reduce((sum, item) => sum + item.quantity, 0);
+            
+            document.getElementById('totalProducts').textContent = totalProducts;
+            document.getElementById('lowStockCount').textContent = lowStockCount;
+            document.getElementById('totalStock').textContent = totalStock.toLocaleString();
+            document.getElementById('totalValue').textContent = '0đ'; // Would need price data
+        }
+
+        function getRowClass(status) {
+            return status === 'Low Stock' ? 'table-warning' : status === 'Out of Stock' ? 'table-danger' : '';
+        }
+
+        function getQuantityBadge(quantity, reorderLevel) {
+            if (quantity === 0) return 'danger';
+            if (quantity <= reorderLevel) return 'warning';
+            return 'success';
+        }
+
+        function getStatusBadge(status) {
+            const badges = {
+                'In Stock': 'success',
+                'Low Stock': 'warning',
+                'Out of Stock': 'danger'
+            };
+            return badges[status] || 'secondary';
+        }
+
+        function getStatusText(status) {
+            const texts = {
+                'In Stock': 'Còn hàng',
+                'Low Stock': 'Sắp hết',
+                'Out of Stock': 'Hết hàng'
+            };
+            return texts[status] || status;
+        }
+
+        function showRestockModal(variantId, productName, sku, currentStock) {
+            document.getElementById('variantId').value = variantId;
+            document.getElementById('productInfo').value = `${productName} (${sku})`;
+            document.getElementById('currentStock').value = currentStock;
+            document.getElementById('restockQuantity').value = '';
+            document.getElementById('restockNotes').value = '';
+            $('#restockModal').modal('show');
+        }
+
+        async function processRestock() {
+            const form = document.getElementById('restockForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            try {
+                const variantId = document.getElementById('variantId').value;
+                const quantity = parseInt(document.getElementById('restockQuantity').value);
+
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/inventory/${variantId}/restock`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(quantity)
+                });
+
+                if (response.ok) {
+                    $('#restockModal').modal('hide');
+                    loadInventory();
+                    alert('Nhập kho thành công!');
+                } else {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Failed to restock');
+                }
+            } catch (error) {
+                console.error('Error processing restock:', error);
+                alert('Có lỗi xảy ra khi nhập kho: ' + error.message);
+            }
+        }
+
+        // Close modal function
+        function closeModal() {
+            $('#restockModal').modal('hide');
+        }
+
+        function showBulkRestockModal() {
+            alert('Tính năng nhập kho hàng loạt đang được phát triển');
+        }
+
+        function loadLowStockItems() {
+            const lowStock = allInventory.filter(item => item.status === 'Low Stock' || item.status === 'Out of Stock');
+            displayInventory(lowStock);
+        }
+
+        // Search and filter
+        document.getElementById('searchInput').addEventListener('input', function() {
+            filterInventory();
+        });
+
+        document.getElementById('statusFilter').addEventListener('change', function() {
+            filterInventory();
+        });
+
+        function filterInventory() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const status = document.getElementById('statusFilter').value;
+
+            let filtered = allInventory;
+
+            if (search) {
+                filtered = filtered.filter(item => 
+                    item.productName.toLowerCase().includes(search) ||
+                    item.sku.toLowerCase().includes(search)
+                );
+            }
+
+            if (status) {
+                filtered = filtered.filter(item => item.status === status);
+            }
+
+            displayInventory(filtered);
+        }
+
+        // Initialize
+        $(document).ready(function() {
+            loadInventory();
+
+            // Handle modal close events
+            $('#restockModal').on('hidden.bs.modal', function () {
+                document.getElementById('restockForm').reset();
+            });
+        });
+
+        loadInventory();
+    </script>
+}
