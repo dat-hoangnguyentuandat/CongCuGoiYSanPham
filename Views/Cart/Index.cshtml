@@ -1,0 +1,241 @@
+@{
+    ViewData["Title"] = "Giỏ hàng";
+}
+
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="fw-bold text-primary mb-4">
+                <i class="fas fa-shopping-cart me-2"></i>Giỏ hàng của bạn
+            </h2>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div id="cartItems">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3 text-muted">Đang tải giỏ hàng...</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 rounded-4 sticky-top" style="top: 2rem;">
+                <div class="card-header bg-primary text-white rounded-top-4 border-0">
+                    <h5 class="card-title mb-0 fw-bold">
+                        <i class="fas fa-calculator me-2"></i>Tổng đơn hàng
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between mb-3">
+                        <span>Tạm tính:</span>
+                        <span class="fw-bold" id="subtotal">0đ</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span>Phí vận chuyển:</span>
+                        <span class="fw-bold" id="shippingFee">30,000đ</span>
+                    </div>
+                    <hr class="my-3">
+                    <div class="d-flex justify-content-between mb-4">
+                        <strong class="fs-5">Tổng cộng:</strong>
+                        <strong class="text-danger fs-4" id="total">0đ</strong>
+                    </div>
+                    <div class="d-grid gap-3">
+                        <a href="/Cart/Checkout" class="btn btn-primary btn-lg rounded-pill hover-lift">
+                            <i class="fas fa-credit-card me-2"></i>Tiến hành đặt hàng
+                        </a>
+                        <a href="/Products" class="btn btn-outline-secondary rounded-pill hover-lift">
+                            <i class="fas fa-arrow-left me-2"></i>Tiếp tục mua sắm
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <style>
+        .hover-lift {
+            transition: all 0.3s ease;
+        }
+        
+        .hover-lift:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .card {
+            transition: all 0.3s ease;
+            border: none;
+        }
+        
+        .rounded-4 {
+            border-radius: 1rem !important;
+        }
+        
+        .rounded-pill {
+            border-radius: 50rem !important;
+        }
+        
+        .text-primary {
+            color: #667eea !important;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+        }
+        
+        .bg-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        }
+        
+        .sticky-top {
+            position: sticky;
+        }
+        
+        .border-primary {
+            border-color: #667eea !important;
+        }
+        
+        .btn-outline-primary {
+            border-color: #667eea;
+            color: #667eea;
+        }
+        
+        .btn-outline-primary:hover {
+            background: #667eea;
+            border-color: #667eea;
+        }
+    </style>
+    
+    <script>
+        async function loadCart() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/cart', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load cart');
+                }
+                
+                const cart = await response.json();
+                displayCart(cart);
+            } catch (error) {
+                console.error('Error loading cart:', error);
+                document.getElementById('cartItems').innerHTML = '<p class="text-center text-danger">Lỗi tải giỏ hàng</p>';
+            }
+        }
+
+        function displayCart(cart) {
+            if (!cart.items || cart.items.length === 0) {
+                document.getElementById('cartItems').innerHTML = `
+                    <div class="card border-0 rounded-4 shadow-sm">
+                        <div class="card-body text-center py-5">
+                            <i class="fas fa-shopping-cart fa-4x text-muted mb-4"></i>
+                            <h4 class="text-muted mb-3">Giỏ hàng trống</h4>
+                            <p class="text-muted mb-4">Hãy thêm sản phẩm vào giỏ hàng để tiếp tục mua sắm</p>
+                            <a href="/Products" class="btn btn-primary rounded-pill px-4 hover-lift">
+                                <i class="fas fa-shopping-bag me-2"></i>Mua sắm ngay
+                            </a>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            const itemsHtml = cart.items.map(item => `
+                <div class="card mb-3 border-0 rounded-4 shadow-sm hover-lift">
+                    <div class="card-body p-4">
+                        <div class="row align-items-center">
+                            <div class="col-md-2">
+                                <img src="${item.imageUrl || '/images/placeholder.jpg'}" class="img-fluid rounded-3" alt="${item.productName}">
+                            </div>
+                            <div class="col-md-4">
+                                <h6 class="fw-bold text-primary mb-2">${item.productName}</h6>
+                                <p class="text-muted small mb-0">${item.variantInfo}</p>
+                            </div>
+                            <div class="col-md-2 text-center">
+                                <p class="text-danger fw-bold fs-5 mb-0">${formatPrice(item.unitPrice)}</p>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="input-group input-group-sm">
+                                    <button class="btn btn-outline-primary rounded-start-pill" onclick="updateQuantity(${item.id}, ${item.quantity - 1})">-</button>
+                                    <input type="number" class="form-control text-center border-primary" value="${item.quantity}" readonly>
+                                    <button class="btn btn-outline-primary rounded-end-pill" onclick="updateQuantity(${item.id}, ${item.quantity + 1})">+</button>
+                                </div>
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <p class="fw-bold fs-5 text-success mb-3">${formatPrice(item.totalPrice)}</p>
+                                <button class="btn btn-sm btn-outline-danger rounded-pill hover-lift" onclick="removeItem(${item.id})">
+                                    <i class="fas fa-trash me-1"></i> Xóa
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('cartItems').innerHTML = itemsHtml;
+            document.getElementById('subtotal').textContent = formatPrice(cart.totalAmount);
+            document.getElementById('total').textContent = formatPrice(cart.totalAmount + 30000);
+        }
+
+        async function updateQuantity(itemId, newQuantity) {
+            if (newQuantity < 1) return;
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/cart/items/${itemId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(newQuantity)
+                });
+
+                if (response.ok) {
+                    loadCart();
+                }
+            } catch (error) {
+                console.error('Error updating quantity:', error);
+            }
+        }
+
+        async function removeItem(itemId) {
+            if (!confirm('Bạn có chắc muốn xóa sản phẩm này?')) return;
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/cart/items/${itemId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    loadCart();
+                }
+            } catch (error) {
+                console.error('Error removing item:', error);
+            }
+        }
+
+        function formatPrice(price) {
+            return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+        }
+
+        loadCart();
+    </script>
+}
