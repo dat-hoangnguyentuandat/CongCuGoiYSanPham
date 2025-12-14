@@ -1,0 +1,509 @@
+@{
+    ViewData["Title"] = "Thanh toán";
+}
+
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="fw-bold text-primary mb-4">
+                <i class="fas fa-credit-card me-2"></i>Thanh toán
+            </h2>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4 shadow-sm border-0 rounded-4">
+                <div class="card-header bg-primary text-white rounded-top-4 border-0">
+                    <h5 class="card-title mb-0 fw-bold">
+                        <i class="fas fa-shipping-fast me-2"></i>Thông tin giao hàng
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <form id="checkoutForm">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Họ tên người nhận *</label>
+                            <input type="text" class="form-control rounded-pill" id="fullName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Số điện thoại *</label>
+                            <input type="tel" class="form-control rounded-pill" id="phoneNumber" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Địa chỉ giao hàng *</label>
+                            <textarea class="form-control rounded-3" id="shippingAddress" rows="3" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Ghi chú</label>
+                            <textarea class="form-control rounded-3" id="notes" rows="2" placeholder="Ghi chú thêm cho đơn hàng (tùy chọn)"></textarea>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-header bg-success text-white rounded-top-4 border-0">
+                    <h5 class="card-title mb-0 fw-bold">
+                        <i class="fas fa-wallet me-2"></i>Phương thức thanh toán
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="form-check mb-3 p-3 border rounded-3 hover-option">
+                        <input class="form-check-input" type="radio" name="paymentMethod" id="cod" value="COD" checked>
+                        <label class="form-check-label fw-bold" for="cod">
+                            <i class="fas fa-hand-holding-usd me-2 text-warning"></i>
+                            <strong>Thanh toán khi nhận hàng (COD)</strong>
+                        </label>
+                    </div>
+                    <div class="form-check mb-3 p-3 border rounded-3 hover-option">
+                        <input class="form-check-input" type="radio" name="paymentMethod" id="bankTransfer" value="BankTransfer">
+                        <label class="form-check-label fw-bold" for="bankTransfer">
+                            <i class="fas fa-university me-2 text-primary"></i>
+                            <strong>Chuyển khoản ngân hàng</strong>
+                        </label>
+                    </div>
+                    <div class="form-check p-3 border rounded-3 hover-option">
+                        <input class="form-check-input" type="radio" name="paymentMethod" id="ewallet" value="EWallet">
+                        <label class="form-check-label fw-bold" for="ewallet">
+                            <i class="fas fa-mobile-alt me-2 text-info"></i>
+                            <strong>Ví điện tử</strong>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card mb-3 shadow-sm border-0 rounded-4 sticky-top" style="top: 2rem;">
+                <div class="card-header bg-info text-white rounded-top-4 border-0">
+                    <h5 class="card-title mb-0 fw-bold">
+                        <i class="fas fa-receipt me-2"></i>Đơn hàng của bạn
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div id="orderSummary">
+                        <div class="text-center py-3">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                            <p class="mt-2 text-muted small">Đang tải...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold mb-3">
+                        <i class="fas fa-tags me-2 text-warning"></i>Mã giảm giá
+                    </h6>
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control rounded-start-pill" id="promotionCode" placeholder="Nhập mã giảm giá" value="">
+                        <button class="btn btn-outline-warning rounded-end-pill" onclick="applyPromotion()" id="applyPromotionBtn">
+                            <i class="fas fa-check"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Promotion info display -->
+                    <div id="promotionInfo" style="display: none;" class="alert alert-success mb-3 rounded-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <strong><i class="fas fa-check-circle me-2"></i><span id="promotionName"></span></strong>
+                                <br>
+                                <small id="promotionDescription" class="text-muted"></small>
+                                <br>
+                                <small class="text-success fw-bold">
+                                    Giảm: <span id="promotionDiscountText"></span>
+                                </small>
+                            </div>
+                            <button type="button" class="btn-close" onclick="removePromotion()" aria-label="Close"></button>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="d-flex justify-content-between mb-3">
+                        <span>Tạm tính:</span>
+                        <span class="fw-bold" id="subtotal">0đ</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span>Phí vận chuyển:</span>
+                        <span class="fw-bold" id="shippingFee">30,000đ</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3" id="discountRow" style="display: none;">
+                        <span>Giảm giá:</span>
+                        <span class="text-success fw-bold" id="discount">0đ</span>
+                    </div>
+                    <hr class="my-4">
+                    <div class="d-flex justify-content-between mb-4">
+                        <strong class="fs-5">Tổng cộng:</strong>
+                        <strong class="text-danger fs-4" id="total">0đ</strong>
+                    </div>
+                    
+                    <button class="btn btn-primary btn-lg w-100 rounded-pill hover-lift" onclick="placeOrder()">
+                        <i class="fas fa-check-circle me-2"></i> Đặt hàng
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <style>
+        .hover-lift {
+            transition: all 0.3s ease;
+        }
+        
+        .hover-lift:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .hover-option {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .hover-option:hover {
+            background-color: #f8f9fa;
+            border-color: #667eea !important;
+        }
+        
+        .card {
+            transition: all 0.3s ease;
+            border: none;
+        }
+        
+        .rounded-4 {
+            border-radius: 1rem !important;
+        }
+        
+        .rounded-pill {
+            border-radius: 50rem !important;
+        }
+        
+        .text-primary {
+            color: #667eea !important;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+        }
+        
+        .bg-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        }
+        
+        .bg-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+        }
+        
+        .bg-info {
+            background: linear-gradient(135deg, #17a2b8 0%, #6f42c1 100%) !important;
+        }
+        
+        .sticky-top {
+            position: sticky;
+        }
+        
+        .form-check-input:checked {
+            background-color: #667eea;
+            border-color: #667eea;
+        }
+    </style>
+    
+    <script>
+        let cartData = null;
+        let appliedPromotion = null;
+        let isDirectCheckout = false;
+
+        async function loadCart() {
+            // Check if this is a direct checkout
+            const urlParams = new URLSearchParams(window.location.search);
+            isDirectCheckout = urlParams.get('direct') === 'true';
+            
+            if (isDirectCheckout) {
+                loadDirectCheckout();
+            } else {
+                loadRegularCart();
+            }
+        }
+
+        async function loadDirectCheckout() {
+            try {
+                const directData = sessionStorage.getItem('directCheckout');
+                if (!directData) {
+                    alert('Không tìm thấy thông tin sản phẩm');
+                    window.location.href = '/Products';
+                    return;
+                }
+
+                const checkoutData = JSON.parse(directData);
+                
+                // Get variant details
+                const response = await fetch(`/api/products/variants/${checkoutData.variantId}`);
+                if (!response.ok) {
+                    throw new Error('Không thể tải thông tin sản phẩm');
+                }
+                
+                const variant = await response.json();
+                
+                // Create cart-like structure for direct checkout
+                cartData = {
+                    items: [{
+                        variantId: variant.id,
+                        productName: `Sản phẩm (${variant.sku})`,
+                        variantInfo: `${variant.size} - ${variant.color}`,
+                        quantity: checkoutData.quantity,
+                        unitPrice: variant.discountPrice || variant.price,
+                        totalPrice: (variant.discountPrice || variant.price) * checkoutData.quantity
+                    }],
+                    totalAmount: (variant.discountPrice || variant.price) * checkoutData.quantity,
+                    totalItems: checkoutData.quantity
+                };
+                
+                displayOrderSummary();
+                
+                // Clear session storage
+                sessionStorage.removeItem('directCheckout');
+                
+            } catch (error) {
+                console.error('Error loading direct checkout:', error);
+                alert('Có lỗi xảy ra: ' + error.message);
+                window.location.href = '/Products';
+            }
+        }
+
+        async function loadRegularCart() {
+            try {
+                const response = await fetch('/api/cart', {
+                    credentials: 'include' // Sử dụng cookies
+                });
+                
+                if (response.ok) {
+                    cartData = await response.json();
+                    displayOrderSummary();
+                } else if (response.status === 401) {
+                    alert('Vui lòng đăng nhập');
+                    window.location.href = '/Identity/Account/Login';
+                } else {
+                    console.error('Error loading cart');
+                    window.location.href = '/Cart';
+                }
+            } catch (error) {
+                console.error('Error loading cart:', error);
+                window.location.href = '/Cart';
+            }
+        }
+
+        function displayOrderSummary() {
+            if (!cartData || !cartData.items || cartData.items.length === 0) {
+                window.location.href = '/Cart';
+                return;
+            }
+
+            const itemsHtml = cartData.items.map(item => `
+                <div class="d-flex justify-content-between mb-2">
+                    <div>
+                        <small>${item.productName}</small><br>
+                        <small class="text-muted">${item.variantInfo} x ${item.quantity}</small>
+                    </div>
+                    <small>${formatPrice(item.totalPrice)}</small>
+                </div>
+            `).join('');
+
+            document.getElementById('orderSummary').innerHTML = itemsHtml;
+            updateTotals();
+        }
+
+        function updateTotals() {
+            const subtotal = cartData.totalAmount;
+            const shippingFee = 30000;
+            const discount = appliedPromotion ? calculateDiscount(subtotal) : 0;
+            const total = subtotal + shippingFee - discount;
+
+            document.getElementById('subtotal').textContent = formatPrice(subtotal);
+            document.getElementById('shippingFee').textContent = formatPrice(shippingFee);
+            
+            if (discount > 0) {
+                document.getElementById('discountRow').style.display = 'flex';
+                document.getElementById('discount').textContent = '-' + formatPrice(discount);
+            }
+            
+            document.getElementById('total').textContent = formatPrice(total);
+        }
+
+        function calculateDiscount(subtotal) {
+            if (!appliedPromotion) return 0;
+            
+            if (appliedPromotion.discountType === 'Percentage') {
+                let discount = subtotal * (appliedPromotion.discountValue / 100);
+                if (appliedPromotion.maxDiscountAmount) {
+                    discount = Math.min(discount, appliedPromotion.maxDiscountAmount);
+                }
+                return discount;
+            } else {
+                return appliedPromotion.discountValue;
+            }
+        }
+
+        async function applyPromotion() {
+            const code = document.getElementById('promotionCode').value.trim().toUpperCase();
+            if (!code) {
+                alert('Vui lòng nhập mã khuyến mãi');
+                return;
+            }
+
+            try {
+                const subtotal = cartData ? cartData.totalAmount : 0;
+                const response = await fetch(`/api/orders/promotions/validate?code=${encodeURIComponent(code)}&subtotal=${subtotal}`);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    alert(errorData.message || 'Mã khuyến mãi không hợp lệ');
+                    return;
+                }
+
+                const promotion = await response.json();
+                appliedPromotion = promotion;
+                
+                // Display promotion info
+                document.getElementById('promotionName').textContent = promotion.name;
+                document.getElementById('promotionDescription').textContent = promotion.description || '';
+                
+                // Display discount text
+                let discountText = '';
+                if (promotion.discountType === 'Percentage') {
+                    discountText = `${promotion.discountValue}%`;
+                    if (promotion.maxDiscountAmount) {
+                        discountText += ` (tối đa ${formatPrice(promotion.maxDiscountAmount)})`;
+                    }
+                } else {
+                    discountText = formatPrice(promotion.discountValue);
+                }
+                document.getElementById('promotionDiscountText').textContent = discountText;
+                
+                // Show promotion info
+                document.getElementById('promotionInfo').style.display = 'block';
+                
+                // Disable input and button
+                document.getElementById('promotionCode').disabled = true;
+                document.getElementById('applyPromotionBtn').disabled = true;
+                
+                // Update totals
+                updateTotals();
+                
+            } catch (error) {
+                console.error('Error applying promotion:', error);
+                alert('Có lỗi xảy ra khi áp dụng mã khuyến mãi');
+            }
+        }
+
+        function removePromotion() {
+            appliedPromotion = null;
+            document.getElementById('promotionCode').value = '';
+            document.getElementById('promotionCode').disabled = false;
+            document.getElementById('applyPromotionBtn').disabled = false;
+            document.getElementById('promotionInfo').style.display = 'none';
+            updateTotals();
+        }
+
+        async function placeOrder() {
+            const form = document.getElementById('checkoutForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+            
+            let orderData;
+            
+            // Get promotion code from applied promotion if available
+            const promotionCode = appliedPromotion ? appliedPromotion.code : (document.getElementById('promotionCode').value.trim() || null);
+            
+            if (isDirectCheckout) {
+                // Direct checkout - create order with specific items
+                orderData = {
+                    items: cartData.items.map(item => ({
+                        variantId: item.variantId,
+                        quantity: item.quantity,
+                        unitPrice: item.unitPrice
+                    })),
+                    shippingAddress: document.getElementById('shippingAddress').value,
+                    phoneNumber: document.getElementById('phoneNumber').value,
+                    paymentMethod: paymentMethod,
+                    promotionCode: promotionCode
+                };
+            } else {
+                // Regular checkout from cart
+                orderData = {
+                    shippingAddress: document.getElementById('shippingAddress').value,
+                    phoneNumber: document.getElementById('phoneNumber').value,
+                    paymentMethod: paymentMethod,
+                    promotionCode: promotionCode
+                };
+            }
+
+            try {
+                const endpoint = isDirectCheckout ? '/api/orders/direct' : '/api/orders';
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(orderData)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    alert('Đặt hàng thành công! Mã đơn hàng: ' + result.orderNumber);
+                    window.location.href = '/Orders';
+                } else if (response.status === 401) {
+                    alert('Vui lòng đăng nhập để đặt hàng');
+                    window.location.href = '/Identity/Account/Login';
+                } else {
+                    let errorMessage = 'Không thể đặt hàng';
+                    try {
+                        const errorData = await response.json();
+                        if (errorData.errors) {
+                            const validationErrors = [];
+                            for (const field in errorData.errors) {
+                                validationErrors.push(`${field}: ${errorData.errors[field].join(', ')}`);
+                            }
+                            errorMessage = 'Lỗi validation:\n' + validationErrors.join('\n');
+                        } else {
+                            errorMessage = errorData.message || errorData.title || 'Lỗi không xác định';
+                        }
+                    } catch (e) {
+                        const errorText = await response.text();
+                        errorMessage = errorText || `HTTP ${response.status}`;
+                    }
+                    alert('Lỗi: ' + errorMessage);
+                }
+            } catch (error) {
+                console.error('Error placing order:', error);
+                alert('Có lỗi xảy ra. Vui lòng thử lại.');
+            }
+        }
+
+        function formatPrice(price) {
+            return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+        }
+
+        // Allow Enter key to apply promotion
+        document.getElementById('promotionCode')?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                applyPromotion();
+            }
+        });
+
+        loadCart();
+    </script>
+}
