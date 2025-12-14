@@ -1,0 +1,209 @@
+@{
+    ViewData["Title"] = "Viết đánh giá";
+    var productId = ViewData["ProductId"];
+}
+
+<div class="container mt-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb bg-light rounded-pill px-4 py-2">
+            <li class="breadcrumb-item"><a href="/" class="text-decoration-none">Trang chủ</a></li>
+            <li class="breadcrumb-item"><a href="/Reviews" class="text-decoration-none">Đánh giá</a></li>
+            <li class="breadcrumb-item active">Viết đánh giá</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-header bg-primary text-white rounded-top-4 border-0 p-4">
+                    <h4 class="mb-0 fw-bold">Viết đánh giá sản phẩm</h4>
+                </div>
+                <div class="card-body p-4">
+                    <div id="productInfo" class="mb-4">
+                        <div class="text-center py-3">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2 text-muted">Đang tải thông tin sản phẩm...</p>
+                        </div>
+                    </div>
+
+                    <form id="reviewForm">
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Đánh giá của bạn *</label>
+                            <div class="rating-input">
+                                <input type="radio" name="rating" value="5" id="star5">
+                                <label for="star5" class="star">★</label>
+                                <input type="radio" name="rating" value="4" id="star4">
+                                <label for="star4" class="star">★</label>
+                                <input type="radio" name="rating" value="3" id="star3">
+                                <label for="star3" class="star">★</label>
+                                <input type="radio" name="rating" value="2" id="star2">
+                                <label for="star2" class="star">★</label>
+                                <input type="radio" name="rating" value="1" id="star1">
+                                <label for="star1" class="star">★</label>
+                            </div>
+                            <small class="form-text text-muted">Nhấn vào sao để đánh giá</small>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Nhận xét của bạn *</label>
+                            <textarea class="form-control rounded-3" id="comment" rows="5" placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm này..." required></textarea>
+                            <small class="form-text text-muted">Tối thiểu 10 ký tự</small>
+                        </div>
+
+                        <div class="d-grid gap-3">
+                            <button type="submit" class="btn btn-primary btn-lg rounded-pill">
+                                Gửi đánh giá
+                            </button>
+                            <a href="/Reviews" class="btn btn-outline-secondary rounded-pill">
+                                Quay lại
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.rating-input {
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: center;
+    gap: 5px;
+    margin: 10px 0;
+}
+
+.rating-input input[type="radio"] {
+    display: none;
+}
+
+.rating-input .star {
+    font-size: 2.5rem;
+    color: #ddd;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.rating-input .star:hover,
+.rating-input .star:hover ~ .star,
+.rating-input input[type="radio"]:checked ~ .star {
+    color: #ffc107;
+    transform: scale(1.1);
+}
+
+.card {
+    border: none;
+}
+
+.rounded-4 {
+    border-radius: 1rem !important;
+}
+
+.rounded-pill {
+    border-radius: 50rem !important;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+}
+
+.bg-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+</style>
+
+@section Scripts {
+    <script>
+        const productId = @productId;
+
+        async function loadProductInfo() {
+            try {
+                const response = await fetch(`/api/products/${productId}`);
+                const product = await response.json();
+                
+                document.getElementById('productInfo').innerHTML = `
+                    <div class="row align-items-center">
+                        <div class="col-md-3">
+                            <img src="${product.imageUrl || '/images/placeholder.jpg'}" class="img-fluid rounded" alt="${product.name}">
+                        </div>
+                        <div class="col-md-9">
+                            <h5>${product.name}</h5>
+                            <p class="text-muted">${product.description}</p>
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    ${Array(Math.floor(product.averageRating)).fill('<i class="fas fa-star text-warning"></i>').join('')}
+                                    ${Array(5 - Math.floor(product.averageRating)).fill('<i class="far fa-star text-warning"></i>').join('')}
+                                    <span class="ms-1">${product.averageRating.toFixed(1)}</span>
+                                </div>
+                                <small class="text-muted">(${product.reviewCount} đánh giá)</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading product:', error);
+                document.getElementById('productInfo').innerHTML = '<p class="text-center text-danger">Lỗi tải thông tin sản phẩm</p>';
+            }
+        }
+
+        document.getElementById('reviewForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const rating = document.querySelector('input[name="rating"]:checked');
+            const comment = document.getElementById('comment').value.trim();
+            
+            if (!rating) {
+                alert('Vui lòng chọn số sao đánh giá');
+                return;
+            }
+            
+            if (comment.length < 10) {
+                alert('Nhận xét phải có ít nhất 10 ký tự');
+                return;
+            }
+            
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('Vui lòng đăng nhập để đánh giá');
+                window.location.href = '/Identity/Account/Login';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/reviews', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        productId: productId,
+                        rating: parseInt(rating.value),
+                        comment: comment
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Cảm ơn bạn đã đánh giá sản phẩm!');
+                    window.location.href = `/Products/Detail/${productId}`;
+                } else {
+                    const error = await response.json();
+                    alert('Lỗi: ' + (error.message || 'Không thể gửi đánh giá'));
+                }
+            } catch (error) {
+                console.error('Error submitting review:', error);
+                alert('Có lỗi xảy ra. Vui lòng thử lại.');
+            }
+        });
+
+        loadProductInfo();
+    </script>
+}
