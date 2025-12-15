@@ -1,0 +1,357 @@
+@{
+    ViewData["Title"] = "Chi tiết đơn hàng";
+    var orderId = ViewData["OrderId"];
+}
+
+<div class="container mt-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb bg-light rounded-pill px-4 py-2">
+            <li class="breadcrumb-item"><a href="/" class="text-decoration-none">Trang chủ</a></li>
+            <li class="breadcrumb-item"><a href="/Orders" class="text-decoration-none">Đơn hàng</a></li>
+            <li class="breadcrumb-item active">Chi tiết</li>
+        </ol>
+    </nav>
+
+    <div id="orderDetail">
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3 text-muted">Đang tải chi tiết đơn hàng...</p>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <style>
+        .hover-lift {
+            transition: all 0.3s ease;
+        }
+        
+        .hover-lift:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .card {
+            transition: all 0.3s ease;
+            border: 1px solid #e9ecef;
+        }
+        
+        .rounded-4 {
+            border-radius: 1rem !important;
+        }
+        
+        .rounded-pill {
+            border-radius: 50rem !important;
+        }
+        
+        .text-primary {
+            color: #667eea !important;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            border-color: #667eea;
+        }
+        
+        .btn-primary:hover {
+            background: #5a6fd8;
+            border-color: #5a6fd8;
+        }
+        
+        .bg-light {
+            background-color: #f8f9fa !important;
+        }
+        
+        .sticky-top {
+            position: sticky;
+        }
+        
+        .badge {
+            font-weight: 500;
+        }
+        
+        .card-header {
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .btn-outline-secondary {
+            color: #6c757d;
+            border-color: #6c757d;
+        }
+        
+        .btn-outline-secondary:hover {
+            background-color: #6c757d;
+            border-color: #6c757d;
+        }
+        
+        .btn-outline-primary {
+            color: #667eea;
+            border-color: #667eea;
+        }
+        
+        .btn-outline-primary:hover {
+            background-color: #667eea;
+            border-color: #667eea;
+        }
+    </style>
+    
+    <script>
+        const orderId = @orderId;
+
+        async function loadOrderDetail() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/orders/${orderId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const order = await response.json();
+                displayOrderDetail(order);
+            } catch (error) {
+                console.error('Error loading order:', error);
+                document.getElementById('orderDetail').innerHTML = '<p class="text-center text-danger">Lỗi tải đơn hàng</p>';
+            }
+        }
+
+        function displayOrderDetail(order) {
+            const html = `
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="card mb-4 shadow-sm border-0 rounded-4">
+                            <div class="card-header bg-light border-0 rounded-top-4 p-4">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0 fw-bold text-dark">
+                                        Đơn hàng: ${order.orderNumber}
+                                    </h5>
+                                    <span class="badge ${getStatusBadgeClass(order.status)} rounded-pill px-3 py-2">${getStatusText(order.status)}</span>
+                                </div>
+                            </div>
+                            <div class="card-body p-4">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p class="mb-2">
+                                            <strong>Ngày đặt:</strong> ${new Date(order.createdAt).toLocaleString('vi-VN')}
+                                        </p>
+                                        <p class="mb-2">
+                                            <strong>Số điện thoại:</strong> ${order.phoneNumber}
+                                        </p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p class="mb-2">
+                                            <strong>Địa chỉ giao hàng:</strong>
+                                        </p>
+                                        <p class="text-muted">${order.shippingAddress}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card mb-4 shadow-sm border-0 rounded-4">
+                            <div class="card-header bg-light border-0 rounded-top-4 p-4">
+                                <h5 class="mb-0 fw-bold text-dark">
+                                    Sản phẩm đã đặt
+                                </h5>
+                            </div>
+                            <div class="card-body p-4">
+                                ${order.items.map(item => `
+                                    <div class="row mb-4 pb-4 border-bottom">
+                                        <div class="col-md-6">
+                                            <h6 class="fw-bold">${item.productName}</h6>
+                                            <p class="text-muted small mb-2">${item.variantInfo}</p>
+                                            <p class="mb-0">
+                                                <strong>Số lượng:</strong> ${item.quantity}
+                                            </p>
+                                        </div>
+                                        <div class="col-md-3 text-center">
+                                            <p class="mb-1 text-muted">Đơn giá</p>
+                                            <p class="fw-bold">${formatPrice(item.unitPrice)}</p>
+                                            <p class="mb-0 text-muted small">x ${item.quantity}</p>
+                                        </div>
+                                        <div class="col-md-3 text-end">
+                                            <p class="mb-3 text-muted">Thành tiền</p>
+                                            <p class="fw-bold text-success fs-5">${formatPrice(item.totalPrice)}</p>
+                                            <div class="d-grid gap-2">
+                                                <a href="/Products/Detail/${item.productId}" class="btn btn-sm btn-outline-secondary rounded-pill">
+                                                    Xem sản phẩm
+                                                </a>
+                                                ${order.status === 'Delivered' ? `
+                                                    <button class="btn btn-sm btn-outline-primary rounded-pill" onclick="reviewProduct(${item.productId}, '${item.productName}')">
+                                                        Đánh giá
+                                                    </button>
+                                                ` : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        ${order.shipment ? `
+                            <div class="card shadow-sm border-0 rounded-4">
+                                <div class="card-header bg-light border-0 rounded-top-4 p-4">
+                                    <h5 class="mb-0 fw-bold text-dark">
+                                        Thông tin vận chuyển
+                                    </h5>
+                                </div>
+                                <div class="card-body p-4">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p class="mb-2">
+                                                <strong>Đơn vị vận chuyển:</strong> ${order.shipment.carrier}
+                                            </p>
+                                            <p class="mb-2">
+                                                <strong>Mã vận đơn:</strong> ${order.shipment.trackingNumber}
+                                            </p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p class="mb-2">
+                                                <strong>Trạng thái:</strong> 
+                                                <span class="badge bg-secondary rounded-pill">${order.shipment.status}</span>
+                                            </p>
+                                            ${order.shipment.shippedAt ? `<p class="mb-2"><strong>Ngày giao:</strong> ${new Date(order.shipment.shippedAt).toLocaleString('vi-VN')}</p>` : ''}
+                                            ${order.shipment.deliveredAt ? `<p class="mb-0"><strong>Ngày nhận:</strong> ${new Date(order.shipment.deliveredAt).toLocaleString('vi-VN')}</p>` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="card mb-4 shadow-sm border-0 rounded-4 sticky-top" style="top: 2rem;">
+                            <div class="card-header bg-light border-0 rounded-top-4 p-4">
+                                <h5 class="mb-0 fw-bold text-dark">
+                                    Thông tin thanh toán
+                                </h5>
+                            </div>
+                            <div class="card-body p-4">
+                                ${order.payment ? `
+                                    <p class="mb-3">
+                                        <strong>Phương thức:</strong> ${getPaymentMethodText(order.payment.paymentMethod)}
+                                    </p>
+                                    <p class="mb-3">
+                                        <strong>Trạng thái:</strong> 
+                                        <span class="badge ${order.payment.status === 'Completed' ? 'bg-success' : 'bg-warning'} rounded-pill">${order.payment.status}</span>
+                                    </p>
+                                    ${order.payment.transactionId ? `<p class="mb-3"><strong>Mã giao dịch:</strong> ${order.payment.transactionId}</p>` : ''}
+                                ` : ''}
+                                
+                                <hr class="my-4">
+                                
+                                <div class="d-flex justify-content-between mb-3">
+                                    <span>Tạm tính:</span>
+                                    <span class="fw-bold">${formatPrice(order.totalAmount - order.shippingFee + order.discountAmount)}</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-3">
+                                    <span>Phí vận chuyển:</span>
+                                    <span class="fw-bold">${formatPrice(order.shippingFee)}</span>
+                                </div>
+                                ${order.discountAmount > 0 ? `
+                                    <div class="d-flex justify-content-between mb-3">
+                                        <span>Giảm giá:</span>
+                                        <span class="text-success fw-bold">-${formatPrice(order.discountAmount)}</span>
+                                    </div>
+                                ` : ''}
+                                <hr class="my-4">
+                                <div class="d-flex justify-content-between mb-4">
+                                    <strong class="fs-5">Tổng cộng:</strong>
+                                    <strong class="text-danger fs-4">${formatPrice(order.totalAmount)}</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-3">
+                            ${order.status === 'Pending' || order.status === 'Confirmed' ? `
+                                <button class="btn btn-outline-danger rounded-pill hover-lift" onclick="cancelOrder()">
+                                    Hủy đơn hàng
+                                </button>
+                            ` : ''}
+                            
+                            ${order.status === 'Delivered' ? `
+                                <button class="btn btn-outline-secondary rounded-pill hover-lift" onclick="reorderAll()">
+                                    Mua lại tất cả
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('orderDetail').innerHTML = html;
+        }
+
+        async function cancelOrder() {
+            if (!confirm('Bạn có chắc muốn hủy đơn hàng này?')) return;
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/orders/${orderId}/cancel`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    alert('Đã hủy đơn hàng thành công');
+                    loadOrderDetail();
+                } else {
+                    alert('Không thể hủy đơn hàng');
+                }
+            } catch (error) {
+                console.error('Error cancelling order:', error);
+                alert('Có lỗi xảy ra');
+            }
+        }
+
+        function getStatusBadgeClass(status) {
+            const classes = {
+                'Pending': 'bg-warning text-dark',
+                'Confirmed': 'bg-info text-white',
+                'Shipping': 'bg-primary text-white',
+                'Delivered': 'bg-success text-white',
+                'Cancelled': 'bg-danger text-white'
+            };
+            return classes[status] || 'bg-secondary text-white';
+        }
+
+        function getStatusText(status) {
+            const texts = {
+                'Pending': 'Chờ xác nhận',
+                'Confirmed': 'Đã xác nhận',
+                'Shipping': 'Đang giao hàng',
+                'Delivered': 'Đã giao hàng',
+                'Cancelled': 'Đã hủy'
+            };
+            return texts[status] || status;
+        }
+
+        function getPaymentMethodText(method) {
+            const texts = {
+                'COD': 'Thanh toán khi nhận hàng',
+                'BankTransfer': 'Chuyển khoản ngân hàng',
+                'EWallet': 'Ví điện tử',
+                'CreditCard': 'Thẻ tín dụng'
+            };
+            return texts[method] || method;
+        }
+
+        function formatPrice(price) {
+            return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+        }
+
+        function reviewProduct(productId, productName) {
+            // Redirect to product detail page with review modal
+            window.location.href = `/Products/Detail/${productId}#review`;
+        }
+
+        function reorderAll() {
+            if (confirm('Bạn có muốn thêm tất cả sản phẩm trong đơn hàng này vào giỏ hàng?')) {
+                // Implementation for reordering all items
+                alert('Tính năng đang được phát triển');
+            }
+        }
+
+        loadOrderDetail();
+    </script>
+}
