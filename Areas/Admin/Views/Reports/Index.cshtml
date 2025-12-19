@@ -1,0 +1,634 @@
+@{
+    ViewData["Title"] = "Báo cáo bán hàng";
+}
+
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Báo cáo bán hàng</h1>
+        <div>
+            <button class="btn btn-success" onclick="exportToCSV()">
+                <i class="fas fa-file-csv"></i> Xuất CSV
+            </button>
+            <button class="btn btn-danger" onclick="exportToPDF()">
+                <i class="fas fa-file-pdf"></i> Xuất PDF
+            </button>
+        </div>
+    </div>
+
+    <!-- Filter Controls -->
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <label>Từ ngày:</label>
+                    <input type="date" class="form-control" id="startDate">
+                </div>
+                <div class="col-md-3">
+                    <label>Đến ngày:</label>
+                    <input type="date" class="form-control" id="endDate">
+                </div>
+                <div class="col-md-3">
+                    <label>Loại báo cáo:</label>
+                    <select class="form-control" id="reportType">
+                        <option value="sales">Doanh thu theo ngày</option>
+                        <option value="inventory">Tồn kho chậm luân chuyển</option>
+                        <option value="orders">Trạng thái đơn hàng</option>
+                        <option value="cancellation">Tỷ lệ hủy/trả hàng</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="btn btn-primary w-100" onclick="loadReport()">
+                        <i class="fas fa-search"></i> Tạo báo cáo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row">
+        <div class="col-xl-8 col-lg-7">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary" id="chartTitle">Biểu đồ doanh thu</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="reportChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4 col-lg-5">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Thống kê tổng quan</h6>
+                </div>
+                <div class="card-body" id="summaryStats">
+                    <div class="text-center">
+                        <p class="text-muted">Chọn loại báo cáo và nhấn "Tạo báo cáo"</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary" id="tableTitle">Dữ liệu chi tiết</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="reportTable">
+                    <thead id="reportTableHead">
+                    </thead>
+                    <tbody id="reportTableBody">
+                        <tr>
+                            <td colspan="100%" class="text-center text-muted">
+                                Chọn loại báo cáo và nhấn "Tạo báo cáo" để xem dữ liệu
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        let currentChart = null;
+        let currentReportData = [];
+
+        // Set default dates (last 365 days instead of 30)
+        const today = new Date();
+        const oneYearAgo = new Date(today.getTime() - (365 * 24 * 60 * 60 * 1000));
+        
+        document.getElementById('endDate').value = today.toISOString().split('T')[0];
+        document.getElementById('startDate').value = oneYearAgo.toISOString().split('T')[0];
+
+        async function loadReport() {
+            const reportType = document.getElementById('reportType').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            const token = localStorage.getItem('token');
+            
+            // Debug: Check if token exists
+            if (!token) {
+                alert('Bạn cần đăng nhập với quyền Admin để xem báo cáo');
+                return;
+            }
+            
+            let url = '';
+            
+            switch(reportType) {
+                case 'sales':
+                    url = `/api/reports/sales?startDate=${startDate}&endDate=${endDate}`;
+                    break;
+                case 'inventory':
+                    url = '/api/reports/inventory/slow-moving';
+                    break;
+                case 'orders':
+                    url = '/api/reports/orders/status';
+                    break;
+                case 'cancellation':
+                    url = `/api/reports/orders/cancellation-return-rate?startDate=${startDate}&endDate=${endDate}`;
+                    break;
+            }
+
+            try {
+                const response = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        alert('Bạn không có quyền truy cập báo cáo. Vui lòng đăng nhập với tài khoản Admin.');
+                        return;
+                    } else if (response.status === 403) {
+                        alert('Bạn không có quyền Admin để xem báo cáo.');
+                        return;
+                    }
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                currentReportData = data;
+
+                // Check if data is empty
+                if (!data || (Array.isArray(data) && data.length === 0)) {
+                    alert('Không có dữ liệu trong khoảng thời gian đã chọn');
+                    return;
+                }
+
+                switch(reportType) {
+                    case 'sales':
+                        displaySalesReport(data);
+                        break;
+                    case 'inventory':
+                        displayInventoryReport(data);
+                        break;
+                    case 'orders':
+                        displayOrdersReport(data);
+                        break;
+                    case 'cancellation':
+                        displayCancellationReport(data);
+                        break;
+                }
+            } catch (error) {
+                console.error('Error loading report:', error);
+                alert('Có lỗi khi tải báo cáo: ' + error.message);
+            }
+        }
+
+        function displaySalesReport(data) {
+            document.getElementById('chartTitle').textContent = 'Biểu đồ doanh thu theo ngày';
+            document.getElementById('tableTitle').textContent = 'Chi tiết doanh thu';
+
+            // Check if data is empty
+            if (!data || data.length === 0) {
+                document.getElementById('summaryStats').innerHTML = `
+                    <div class="text-center">
+                        <p class="text-muted">Không có dữ liệu doanh thu trong khoảng thời gian đã chọn</p>
+                    </div>
+                `;
+                
+                document.getElementById('reportTableBody').innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">Không có dữ liệu</td>
+                    </tr>
+                `;
+                
+                // Clear chart
+                const ctx = document.getElementById('reportChart').getContext('2d');
+                if (currentChart) currentChart.destroy();
+                return;
+            }
+
+            // Update summary stats
+            const totalRevenue = data.reduce((sum, item) => sum + item.totalRevenue, 0);
+            const totalOrders = data.reduce((sum, item) => sum + item.totalOrders, 0);
+            const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+            document.getElementById('summaryStats').innerHTML = `
+                <div class="row no-gutters">
+                    <div class="col-12 mb-3">
+                        <div class="text-center">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Tổng doanh thu</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">${formatPrice(totalRevenue)}</div>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="text-center">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Tổng đơn hàng</div>
+                            <div class="h6 mb-0 font-weight-bold text-gray-800">${totalOrders}</div>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="text-center">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Giá trị TB</div>
+                            <div class="h6 mb-0 font-weight-bold text-gray-800">${formatPrice(avgOrderValue)}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Update chart
+            const ctx = document.getElementById('reportChart').getContext('2d');
+            if (currentChart) currentChart.destroy();
+
+            currentChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(item => new Date(item.date).toLocaleDateString('vi-VN')),
+                    datasets: [{
+                        label: 'Doanh thu (VND)',
+                        data: data.map(item => item.totalRevenue),
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return new Intl.NumberFormat('vi-VN').format(value) + 'đ';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Update table
+            document.getElementById('reportTableHead').innerHTML = `
+                <tr>
+                    <th>Ngày</th>
+                    <th>Doanh thu</th>
+                    <th>Số đơn hàng</th>
+                    <th>Số sản phẩm</th>
+                    <th>Giá trị trung bình</th>
+                </tr>
+            `;
+
+            document.getElementById('reportTableBody').innerHTML = data.map(item => `
+                <tr>
+                    <td>${new Date(item.date).toLocaleDateString('vi-VN')}</td>
+                    <td class="text-success font-weight-bold">${formatPrice(item.totalRevenue)}</td>
+                    <td>${item.totalOrders}</td>
+                    <td>${item.totalItems}</td>
+                    <td>${formatPrice(item.averageOrderValue)}</td>
+                </tr>
+            `).join('');
+        }
+
+        function displayInventoryReport(data) {
+            document.getElementById('chartTitle').textContent = 'Tồn kho chậm luân chuyển';
+            document.getElementById('tableTitle').textContent = 'Chi tiết tồn kho';
+
+            // Update summary
+            const totalSlowMoving = data.length;
+            const totalStock = data.reduce((sum, item) => sum + item.currentStock, 0);
+
+            document.getElementById('summaryStats').innerHTML = `
+                <div class="text-center">
+                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Sản phẩm chậm bán</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800">${totalSlowMoving}</div>
+                    <hr>
+                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Tổng tồn kho</div>
+                    <div class="h6 mb-0 font-weight-bold text-gray-800">${totalStock}</div>
+                </div>
+            `;
+
+            // Update table
+            document.getElementById('reportTableHead').innerHTML = `
+                <tr>
+                    <th>Sản phẩm</th>
+                    <th>SKU</th>
+                    <th>Tồn kho</th>
+                    <th>Mức tối thiểu</th>
+                    <th>Ngày nhập cuối</th>
+                    <th>Đã bán (30 ngày)</th>
+                    <th>Trạng thái</th>
+                </tr>
+            `;
+
+            document.getElementById('reportTableBody').innerHTML = data.map(item => `
+                <tr>
+                    <td>${item.productName}</td>
+                    <td><code>${item.sku}</code></td>
+                    <td>${item.currentStock}</td>
+                    <td>${item.reorderLevel}</td>
+                    <td>${item.daysSinceLastRestock} ngày trước</td>
+                    <td>${item.totalSold}</td>
+                    <td><span class="badge badge-${item.status === 'Low Stock' ? 'warning' : 'danger'}">${item.status}</span></td>
+                </tr>
+            `).join('');
+
+            // Simple bar chart for inventory
+            const ctx = document.getElementById('reportChart').getContext('2d');
+            if (currentChart) currentChart.destroy();
+
+            currentChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.slice(0, 10).map(item => item.sku),
+                    datasets: [{
+                        label: 'Tồn kho',
+                        data: data.slice(0, 10).map(item => item.currentStock),
+                        backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                        borderColor: 'rgba(255, 206, 86, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function displayOrdersReport(data) {
+            document.getElementById('chartTitle').textContent = 'Trạng thái đơn hàng';
+            document.getElementById('tableTitle').textContent = 'Chi tiết trạng thái';
+
+            // Update summary
+            const totalOrders = data.reduce((sum, item) => sum + item.count, 0);
+            const cancelledOrders = data.find(item => item.status === 'Cancelled')?.count || 0;
+            const returnedOrders = data.find(item => item.status === 'Returned')?.count || 0;
+            const cancelReturnRate = totalOrders > 0 ? ((cancelledOrders + returnedOrders) / totalOrders * 100).toFixed(1) : 0;
+
+            document.getElementById('summaryStats').innerHTML = `
+                <div class="text-center">
+                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Tổng đơn hàng</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800">${totalOrders}</div>
+                    <hr>
+                    <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Tỷ lệ hủy/trả</div>
+                    <div class="h6 mb-0 font-weight-bold text-gray-800">${cancelReturnRate}%</div>
+                </div>
+            `;
+
+            // Update table
+            document.getElementById('reportTableHead').innerHTML = `
+                <tr>
+                    <th>Trạng thái</th>
+                    <th>Số lượng</th>
+                    <th>Tỷ lệ</th>
+                    <th>Tổng giá trị</th>
+                </tr>
+            `;
+
+            document.getElementById('reportTableBody').innerHTML = data.map(item => `
+                <tr>
+                    <td><span class="badge badge-${getStatusBadge(item.status)}">${getStatusText(item.status)}</span></td>
+                    <td>${item.count}</td>
+                    <td>${item.percentage.toFixed(1)}%</td>
+                    <td>${formatPrice(item.totalAmount)}</td>
+                </tr>
+            `).join('');
+
+            // Pie chart for order status
+            const ctx = document.getElementById('reportChart').getContext('2d');
+            if (currentChart) currentChart.destroy();
+
+            currentChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.map(item => getStatusText(item.status)),
+                    datasets: [{
+                        data: data.map(item => item.count),
+                        backgroundColor: [
+                            '#28a745', // Delivered - green
+                            '#ffc107', // Pending - yellow  
+                            '#17a2b8', // Confirmed - blue
+                            '#007bff', // Shipping - blue
+                            '#dc3545', // Cancelled - red
+                            '#6c757d'  // Returned - gray
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function displayCancellationReport(data) {
+            document.getElementById('chartTitle').textContent = 'Tỷ lệ hủy/trả hàng';
+            document.getElementById('tableTitle').textContent = 'Chi tiết tỷ lệ hủy/trả';
+
+            // Update summary
+            document.getElementById('summaryStats').innerHTML = `
+                <div class="row no-gutters">
+                    <div class="col-12 mb-3">
+                        <div class="text-center">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Tỷ lệ hủy/trả tổng</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">${data.combinedRate.toFixed(1)}%</div>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="text-center">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Tỷ lệ hủy</div>
+                            <div class="h6 mb-0 font-weight-bold text-gray-800">${data.cancellationRate.toFixed(1)}%</div>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="text-center">
+                            <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">Tỷ lệ trả</div>
+                            <div class="h6 mb-0 font-weight-bold text-gray-800">${data.returnRate.toFixed(1)}%</div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="text-center">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Doanh thu mất</div>
+                            <div class="h6 mb-0 font-weight-bold text-gray-800">${formatPrice(data.lostRevenue)}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Update table
+            document.getElementById('reportTableHead').innerHTML = `
+                <tr>
+                    <th>Chỉ số</th>
+                    <th>Số lượng</th>
+                    <th>Tỷ lệ</th>
+                    <th>Giá trị</th>
+                </tr>
+            `;
+
+            document.getElementById('reportTableBody').innerHTML = `
+                <tr>
+                    <td><span class="badge badge-primary">Tổng đơn hàng</span></td>
+                    <td>${data.totalOrders}</td>
+                    <td>100%</td>
+                    <td>-</td>
+                </tr>
+                <tr>
+                    <td><span class="badge badge-success">Hoàn thành</span></td>
+                    <td>${data.completedOrders}</td>
+                    <td>${((data.completedOrders / data.totalOrders) * 100).toFixed(1)}%</td>
+                    <td>-</td>
+                </tr>
+                <tr>
+                    <td><span class="badge badge-warning">Đã hủy</span></td>
+                    <td>${data.cancelledOrders}</td>
+                    <td>${data.cancellationRate.toFixed(1)}%</td>
+                    <td class="text-danger">${formatPrice(data.cancelledAmount)}</td>
+                </tr>
+                <tr>
+                    <td><span class="badge badge-secondary">Đã trả</span></td>
+                    <td>${data.returnedOrders}</td>
+                    <td>${data.returnRate.toFixed(1)}%</td>
+                    <td class="text-danger">${formatPrice(data.returnedAmount)}</td>
+                </tr>
+                <tr class="table-warning">
+                    <td><strong>Tổng hủy/trả</strong></td>
+                    <td><strong>${data.cancelledOrders + data.returnedOrders}</strong></td>
+                    <td><strong>${data.combinedRate.toFixed(1)}%</strong></td>
+                    <td class="text-danger"><strong>${formatPrice(data.lostRevenue)}</strong></td>
+                </tr>
+            `;
+
+            // Pie chart for cancellation/return
+            const ctx = document.getElementById('reportChart').getContext('2d');
+            if (currentChart) currentChart.destroy();
+
+            currentChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Hoàn thành', 'Đã hủy', 'Đã trả', 'Khác'],
+                    datasets: [{
+                        data: [
+                            data.completedOrders,
+                            data.cancelledOrders,
+                            data.returnedOrders,
+                            data.totalOrders - data.completedOrders - data.cancelledOrders - data.returnedOrders
+                        ],
+                        backgroundColor: [
+                            '#28a745', // Completed - green
+                            '#ffc107', // Cancelled - yellow
+                            '#6c757d', // Returned - gray
+                            '#17a2b8'  // Others - blue
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function getStatusBadge(status) {
+            const badges = {
+                'Pending': 'warning',
+                'Confirmed': 'info', 
+                'Shipping': 'primary',
+                'Delivered': 'success',
+                'Cancelled': 'danger',
+                'Returned': 'secondary'
+            };
+            return badges[status] || 'secondary';
+        }
+
+        function getStatusText(status) {
+            const texts = {
+                'Pending': 'Chờ xác nhận',
+                'Confirmed': 'Đã xác nhận',
+                'Shipping': 'Đang giao',
+                'Delivered': 'Đã giao',
+                'Cancelled': 'Đã hủy',
+                'Returned': 'Đã trả'
+            };
+            return texts[status] || status;
+        }
+
+        function formatPrice(price) {
+            return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+        }
+
+        function exportToCSV() {
+            if (!currentReportData.length) {
+                alert('Không có dữ liệu để xuất');
+                return;
+            }
+
+            const reportType = document.getElementById('reportType').value;
+            let csv = '';
+            let filename = '';
+
+            switch(reportType) {
+                case 'sales':
+                    csv = 'Ngày,Doanh thu,Số đơn hàng,Số sản phẩm,Giá trị trung bình\n';
+                    csv += currentReportData.map(item => 
+                        `${new Date(item.date).toLocaleDateString('vi-VN')},${item.totalRevenue},${item.totalOrders},${item.totalItems},${item.averageOrderValue}`
+                    ).join('\n');
+                    filename = 'sales_report.csv';
+                    break;
+                case 'inventory':
+                    csv = 'Sản phẩm,SKU,Tồn kho,Mức tối thiểu,Ngày nhập cuối,Đã bán,Trạng thái\n';
+                    csv += currentReportData.map(item => 
+                        `${item.productName},${item.sku},${item.currentStock},${item.reorderLevel},${item.daysSinceLastRestock},${item.totalSold},${item.status}`
+                    ).join('\n');
+                    filename = 'inventory_report.csv';
+                    break;
+                case 'orders':
+                    csv = 'Trạng thái,Số lượng,Tỷ lệ,Tổng giá trị\n';
+                    csv += currentReportData.map(item => 
+                        `${item.status},${item.count},${item.percentage},${item.totalAmount}`
+                    ).join('\n');
+                    filename = 'orders_report.csv';
+                    break;
+                case 'cancellation':
+                    csv = 'Chỉ số,Số lượng,Tỷ lệ,Giá trị\n';
+                    csv += `Tổng đơn hàng,${currentReportData.totalOrders},100%,-\n`;
+                    csv += `Hoàn thành,${currentReportData.completedOrders},${((currentReportData.completedOrders / currentReportData.totalOrders) * 100).toFixed(1)}%,-\n`;
+                    csv += `Đã hủy,${currentReportData.cancelledOrders},${currentReportData.cancellationRate.toFixed(1)}%,${currentReportData.cancelledAmount}\n`;
+                    csv += `Đã trả,${currentReportData.returnedOrders},${currentReportData.returnRate.toFixed(1)}%,${currentReportData.returnedAmount}\n`;
+                    csv += `Tổng hủy/trả,${currentReportData.cancelledOrders + currentReportData.returnedOrders},${currentReportData.combinedRate.toFixed(1)}%,${currentReportData.lostRevenue}`;
+                    filename = 'cancellation_report.csv';
+                    break;
+            }
+
+            downloadCSV(csv, filename);
+        }
+
+        function downloadCSV(csv, filename) {
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function exportToPDF() {
+            alert('Tính năng xuất PDF đang được phát triển');
+        }
+
+        // Load default report
+        loadReport();
+    </script>
+}
