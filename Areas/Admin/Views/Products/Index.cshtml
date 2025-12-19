@@ -1,0 +1,286 @@
+@{
+    ViewData["Title"] = "Product Management";
+}
+
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Product Management</h1>
+        <div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" id="showInactive" onchange="loadProducts()">
+                <label class="form-check-label" for="showInactive">
+                    Hiển thị sản phẩm đã xóa
+                </label>
+            </div>
+            <button class="btn btn-primary ml-2" onclick="showCreateModal()">
+                <i class="fas fa-plus"></i> Add New Product
+            </button>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="productsTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Variants</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create/Edit Modal -->
+<div class="modal fade" id="productModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Product Details</h5>
+                <button type="button" class="close" onclick="closeModal()" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="productForm">
+                    <input type="hidden" id="productId">
+                    <div class="form-group">
+                        <label>Name</label>
+                        <input type="text" class="form-control" id="productName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea class="form-control" id="productDescription" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select class="form-control" id="productCategory" required>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Image URL</label>
+                        <input type="text" class="form-control" id="productImage">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Close</button>
+                <button type="button" class="btn btn-primary" onclick="saveProduct()">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let categories = [];
+
+        async function loadCategories() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/categories', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                categories = await response.json();
+                
+                const categorySelect = document.getElementById('productCategory');
+                categorySelect.innerHTML = '<option value="">Chọn danh mục</option>' + 
+                    categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+        }
+
+        async function loadProducts() {
+            try {
+                const token = localStorage.getItem('token');
+                const showInactive = document.getElementById('showInactive').checked;
+                const url = showInactive ? '/api/admin/products?includeInactive=true' : '/api/admin/products';
+                
+                const response = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const products = await response.json();
+
+                const tbody = document.querySelector('#productsTable tbody');
+                tbody.innerHTML = products.map(p => `
+                    <tr class="${!p.isActive ? 'table-secondary' : ''}">
+                        <td>${p.id}</td>
+                        <td>
+                            ${p.name}
+                            ${!p.isActive ? '<small class="text-muted d-block">(Đã xóa)</small>' : ''}
+                        </td>
+                        <td>${p.categoryName}</td>
+                        <td>${p.variantCount}</td>
+                        <td><span class="badge badge-${p.isActive ? 'success' : 'danger'}">${p.isActive ? 'Active' : 'Inactive'}</span></td>
+                        <td>${new Date(p.createdAt).toLocaleDateString('vi-VN')}</td>
+                        <td>
+                            ${p.isActive ? `
+                                <button class="btn btn-sm btn-info" onclick="editProduct(${p.id})">Edit</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id})">Delete</button>
+                            ` : `
+                                <button class="btn btn-sm btn-success" onclick="restoreProduct(${p.id})">Restore</button>
+                                <small class="text-muted d-block">Đã xóa</small>
+                            `}
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading products:', error);
+                alert('Có lỗi khi tải danh sách sản phẩm');
+            }
+        }
+
+        function showCreateModal() {
+            document.getElementById('productForm').reset();
+            document.getElementById('productId').value = '';
+            document.querySelector('.modal-title').textContent = 'Thêm sản phẩm mới';
+            $('#productModal').modal('show');
+        }
+
+        async function editProduct(id) {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/products/${id}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const product = await response.json();
+
+                document.getElementById('productId').value = product.id;
+                document.getElementById('productName').value = product.name;
+                document.getElementById('productDescription').value = product.description;
+                document.getElementById('productImage').value = product.imageUrl || '';
+                
+                // Find category by name and set value
+                const category = categories.find(c => c.name === product.categoryName);
+                if (category) {
+                    document.getElementById('productCategory').value = category.id;
+                }
+
+                document.querySelector('.modal-title').textContent = 'Chỉnh sửa sản phẩm';
+                $('#productModal').modal('show');
+            } catch (error) {
+                console.error('Error loading product:', error);
+                alert('Có lỗi khi tải thông tin sản phẩm');
+            }
+        }
+
+        async function deleteProduct(id) {
+            if (!confirm('Bạn có chắc chắn muốn xóa sản phẩm này?\n\nLưu ý: Sản phẩm sẽ được ẩn khỏi danh sách nhưng vẫn có thể khôi phục.')) {
+                return;
+            }
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/admin/products/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    alert('Xóa sản phẩm thành công');
+                    loadProducts();
+                } else {
+                    const errorData = await response.json();
+                    alert('Có lỗi khi xóa sản phẩm: ' + (errorData.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error deleting product:', error);
+                alert('Có lỗi khi xóa sản phẩm: ' + error.message);
+            }
+        }
+
+        async function restoreProduct(id) {
+            if (!confirm('Bạn có muốn khôi phục sản phẩm này?')) {
+                return;
+            }
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/admin/products/${id}/restore`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    alert('Khôi phục sản phẩm thành công');
+                    loadProducts();
+                } else {
+                    alert('Có lỗi khi khôi phục sản phẩm');
+                }
+            } catch (error) {
+                console.error('Error restoring product:', error);
+                alert('Có lỗi khi khôi phục sản phẩm: ' + error.message);
+            }
+        }
+
+        async function saveProduct() {
+            const form = document.getElementById('productForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const id = document.getElementById('productId').value;
+            const data = {
+                name: document.getElementById('productName').value,
+                description: document.getElementById('productDescription').value,
+                categoryId: parseInt(document.getElementById('productCategory').value),
+                imageUrl: document.getElementById('productImage').value
+            };
+
+            try {
+                const token = localStorage.getItem('token');
+                const url = id ? `/api/admin/products/${id}` : '/api/admin/products';
+                const method = id ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method,
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    $('#productModal').modal('hide');
+                    alert(id ? 'Cập nhật sản phẩm thành công' : 'Thêm sản phẩm thành công');
+                    loadProducts();
+                } else {
+                    alert('Có lỗi khi lưu sản phẩm');
+                }
+            } catch (error) {
+                console.error('Error saving product:', error);
+                alert('Có lỗi khi lưu sản phẩm');
+            }
+        }
+
+        // Close modal functions
+        function closeModal() {
+            $('#productModal').modal('hide');
+        }
+
+        // Initialize
+        $(document).ready(function() {
+            loadCategories().then(() => {
+                loadProducts();
+            });
+
+            // Handle modal close events
+            $('#productModal').on('hidden.bs.modal', function () {
+                document.getElementById('productForm').reset();
+            });
+        });
+    </script>
+}
