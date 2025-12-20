@@ -1,0 +1,255 @@
+@{
+    ViewData["Title"] = "Quản lý danh mục";
+}
+
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Quản lý danh mục</h1>
+        <button class="btn btn-primary" onclick="showCreateModal()">
+            <i class="fas fa-plus"></i> Tạo danh mục mới
+        </button>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="categoriesTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Tên danh mục</th>
+                            <th>Mô tả</th>
+                            <th>Danh mục cha</th>
+                            <th>Số sản phẩm</th>
+                            <th>Danh mục con</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create/Edit Modal -->
+<div class="modal fade" id="categoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Chi tiết danh mục</h5>
+                <button type="button" class="close" onclick="closeModal()" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="categoryForm">
+                    <input type="hidden" id="categoryId">
+                    <div class="form-group">
+                        <label>Tên danh mục *</label>
+                        <input type="text" class="form-control" id="categoryName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Mô tả</label>
+                        <textarea class="form-control" id="categoryDescription" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Danh mục cha</label>
+                        <select class="form-control" id="parentCategoryId">
+                            <option value="">-- Không có danh mục cha --</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Hủy</button>
+                <button type="button" class="btn btn-primary" onclick="saveCategory()">Lưu</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let allCategories = [];
+
+        async function loadCategories() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/admin/categories', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Không thể tải danh sách danh mục');
+                }
+                
+                allCategories = await response.json();
+
+                const tbody = document.querySelector('#categoriesTable tbody');
+                tbody.innerHTML = allCategories.map(c => `
+                    <tr>
+                        <td>${c.id}</td>
+                        <td>
+                            ${c.parentCategoryName ? '<i class="fas fa-level-up-alt text-muted"></i> ' : ''}
+                            <strong>${c.name}</strong>
+                        </td>
+                        <td>${c.description || '<em class="text-muted">Không có mô tả</em>'}</td>
+                        <td>${c.parentCategoryName || '<em class="text-muted">Danh mục gốc</em>'}</td>
+                        <td>
+                            <span class="badge badge-info">${c.productCount}</span>
+                        </td>
+                        <td>
+                            <span class="badge badge-secondary">${c.subCategoryCount}</span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-info" onclick="editCategory(${c.id})">Sửa</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteCategory(${c.id})" ${c.productCount > 0 || c.subCategoryCount > 0 ? 'disabled title="Không thể xóa danh mục có sản phẩm hoặc danh mục con"' : ''}>
+                                Xóa
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+
+                // Update parent category dropdown
+                updateParentCategoryDropdown();
+            } catch (error) {
+                console.error('Error loading categories:', error);
+                alert('Có lỗi khi tải danh sách danh mục: ' + error.message);
+            }
+        }
+
+        function updateParentCategoryDropdown() {
+            const select = document.getElementById('parentCategoryId');
+            const currentId = document.getElementById('categoryId').value;
+            
+            select.innerHTML = '<option value="">-- Không có danh mục cha --</option>';
+            
+            allCategories.forEach(c => {
+                // Don't allow selecting self or children as parent
+                if (c.id != currentId) {
+                    select.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+                }
+            });
+        }
+
+        function showCreateModal() {
+            document.getElementById('categoryForm').reset();
+            document.getElementById('categoryId').value = '';
+            document.querySelector('.modal-title').textContent = 'Tạo danh mục mới';
+            updateParentCategoryDropdown();
+            $('#categoryModal').modal('show');
+        }
+
+        async function editCategory(id) {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/admin/categories/${id}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Không thể tải thông tin danh mục');
+                }
+                
+                const category = await response.json();
+
+                document.getElementById('categoryId').value = category.id;
+                document.getElementById('categoryName').value = category.name;
+                document.getElementById('categoryDescription').value = category.description || '';
+                
+                updateParentCategoryDropdown();
+                document.getElementById('parentCategoryId').value = category.parentCategoryId || '';
+
+                document.querySelector('.modal-title').textContent = 'Chỉnh sửa danh mục';
+                $('#categoryModal').modal('show');
+            } catch (error) {
+                console.error('Error loading category:', error);
+                alert('Có lỗi khi tải thông tin danh mục: ' + error.message);
+            }
+        }
+
+        async function saveCategory() {
+            const form = document.getElementById('categoryForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const id = document.getElementById('categoryId').value;
+            const data = {
+                name: document.getElementById('categoryName').value,
+                description: document.getElementById('categoryDescription').value,
+                parentCategoryId: document.getElementById('parentCategoryId').value || null
+            };
+
+            const token = localStorage.getItem('token');
+            const url = id ? `/api/admin/categories/${id}` : '/api/admin/categories';
+            const method = id ? 'PUT' : 'POST';
+
+            try {
+                const response = await fetch(url, {
+                    method,
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    $('#categoryModal').modal('hide');
+                    loadCategories();
+                    alert(id ? 'Cập nhật danh mục thành công!' : 'Tạo danh mục thành công!');
+                } else {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Có lỗi xảy ra khi lưu danh mục');
+                }
+            } catch (error) {
+                console.error('Error saving category:', error);
+                alert('Có lỗi xảy ra: ' + error.message);
+            }
+        }
+
+        async function deleteCategory(id) {
+            if (!confirm('Bạn có chắc muốn xóa danh mục này?')) return;
+
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch(`/api/admin/categories/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    loadCategories();
+                    alert('Xóa danh mục thành công!');
+                } else {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Không thể xóa danh mục');
+                }
+            } catch (error) {
+                console.error('Error deleting category:', error);
+                alert('Có lỗi xảy ra: ' + error.message);
+            }
+        }
+
+        // Close modal function
+        function closeModal() {
+            $('#categoryModal').modal('hide');
+        }
+
+        // Initialize
+        $(document).ready(function() {
+            loadCategories();
+
+            // Handle modal close events
+            $('#categoryModal').on('hidden.bs.modal', function () {
+                document.getElementById('categoryForm').reset();
+            });
+        });
+
+        loadCategories();
+    </script>
+}
