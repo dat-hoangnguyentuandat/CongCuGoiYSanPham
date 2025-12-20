@@ -1,0 +1,346 @@
+@{
+    ViewData["Title"] = "Quản lý đơn hàng";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-shopping-cart"></i> Quản lý đơn hàng</h2>
+    <div class="btn-group" role="group">
+        <button type="button" class="btn btn-outline-primary" onclick="filterOrders('all')">Tất cả</button>
+        <button type="button" class="btn btn-outline-warning" onclick="filterOrders('Pending')">Chờ xử lý</button>
+        <button type="button" class="btn btn-outline-info" onclick="filterOrders('Processing')">Đang xử lý</button>
+        <button type="button" class="btn btn-outline-success" onclick="filterOrders('Shipped')">Đã gửi</button>
+        <button type="button" class="btn btn-outline-secondary" onclick="filterOrders('Delivered')">Đã giao</button>
+        <button type="button" class="btn btn-outline-danger" onclick="filterOrders('Cancelled')">Đã hủy</button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover" id="ordersTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>Mã đơn hàng</th>
+                        <th>Khách hàng</th>
+                        <th>Email</th>
+                        <th>Số lượng</th>
+                        <th>Tổng tiền</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày tạo</th>
+                        <th style="width: 120px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="ordersTableBody">
+                    <tr>
+                        <td colspan="8" class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Đang tải...</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Order Detail Modal -->
+<div class="modal fade" id="orderDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Chi tiết đơn hàng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="orderDetailContent">
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Đang tải...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<style>
+    .table-responsive {
+        overflow: visible !important;
+    }
+    
+    .dropdown-menu {
+        z-index: 1050;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        border: 1px solid rgba(0, 0, 0, 0.15);
+    }
+    
+    .dropdown-menu .dropdown-item {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+    }
+    
+    .dropdown-menu .dropdown-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .dropdown-menu .dropdown-item i {
+        width: 16px;
+        margin-right: 8px;
+    }
+    
+    #ordersTable tbody tr:last-child .dropdown-menu {
+        transform: translateY(-100%);
+        margin-top: -8px;
+    }
+</style>
+
+<script>
+let currentFilter = 'all';
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadOrders();
+});
+
+function filterOrders(status) {
+    currentFilter = status;
+    
+    // Update button states
+    document.querySelectorAll('.btn-group .btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    loadOrders();
+}
+
+async function loadOrders() {
+    try {
+        const url = currentFilter === 'all' 
+            ? '/api/admin/orders' 
+            : `/api/admin/orders?status=${currentFilter}`;
+
+        const response = await fetch(url, {
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include' // Sử dụng cookie authentication
+        });
+
+        if (response.status === 401 || response.status === 403) {
+            window.location.href = '/Identity/Account/Login';
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error('Failed to load orders');
+        }
+
+        const orders = await response.json();
+        displayOrders(orders);
+    } catch (error) {
+        console.error('Error loading orders:', error);
+        document.getElementById('ordersTableBody').innerHTML = 
+            '<tr><td colspan="8" class="text-center text-danger">Lỗi khi tải dữ liệu</td></tr>';
+    }
+}
+
+function displayOrders(orders) {
+    const tbody = document.getElementById('ordersTableBody');
+    
+    if (orders.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center">Không có đơn hàng nào</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = orders.map(order => `
+        <tr>
+            <td><strong>${order.orderNumber}</strong></td>
+            <td>${order.customerName || 'N/A'}</td>
+            <td>${order.customerEmail}</td>
+            <td><span class="badge bg-info">${order.itemCount}</span></td>
+            <td><strong>${formatCurrency(order.totalAmount)}</strong></td>
+            <td>${getStatusBadge(order.status)}</td>
+            <td>${formatDate(order.createdAt)}</td>
+            <td>
+                <div class="d-flex gap-1">
+                    <button class="btn btn-sm btn-outline-primary" onclick="viewOrderDetail(${order.id})" title="Xem chi tiết">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Cập nhật trạng thái">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            ${order.status !== 'Processing' ? '<li><a class="dropdown-item" href="#" onclick="updateOrderStatus(' + order.id + ', \'Processing\')"><i class="fas fa-cog text-info"></i> Đang xử lý</a></li>' : ''}
+                            ${order.status !== 'Shipped' ? '<li><a class="dropdown-item" href="#" onclick="updateOrderStatus(' + order.id + ', \'Shipped\')"><i class="fas fa-shipping-fast text-primary"></i> Đã gửi</a></li>' : ''}
+                            ${order.status !== 'Delivered' ? '<li><a class="dropdown-item" href="#" onclick="updateOrderStatus(' + order.id + ', \'Delivered\')"><i class="fas fa-check-circle text-success"></i> Đã giao</a></li>' : ''}
+                            ${order.status !== 'Cancelled' ? '<li><hr class="dropdown-divider"></li><li><a class="dropdown-item text-danger" href="#" onclick="updateOrderStatus(' + order.id + ', \'Cancelled\')"><i class="fas fa-times-circle"></i> Hủy đơn</a></li>' : ''}
+                        </ul>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function getStatusBadge(status) {
+    const statusMap = {
+        'Pending': '<span class="badge bg-warning">Chờ xử lý</span>',
+        'Processing': '<span class="badge bg-info">Đang xử lý</span>',
+        'Shipped': '<span class="badge bg-primary">Đã gửi</span>',
+        'Delivered': '<span class="badge bg-success">Đã giao</span>',
+        'Cancelled': '<span class="badge bg-danger">Đã hủy</span>'
+    };
+    return statusMap[status] || `<span class="badge bg-secondary">${status}</span>`;
+}
+
+async function viewOrderDetail(orderId) {
+    try {
+        const response = await fetch(`/api/admin/orders/${orderId}`, {
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include' // Sử dụng cookie authentication
+        });
+
+        if (response.status === 401 || response.status === 403) {
+            window.location.href = '/Identity/Account/Login';
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error('Failed to load order detail');
+        }
+
+        const order = await response.json();
+        displayOrderDetail(order);
+        
+        const modal = new bootstrap.Modal(document.getElementById('orderDetailModal'));
+        modal.show();
+    } catch (error) {
+        console.error('Error loading order detail:', error);
+        alert('Lỗi khi tải chi tiết đơn hàng');
+    }
+}
+
+function displayOrderDetail(order) {
+    const content = document.getElementById('orderDetailContent');
+    content.innerHTML = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Thông tin đơn hàng</h6>
+                <table class="table table-sm">
+                    <tr><td><strong>Mã đơn hàng:</strong></td><td>${order.orderNumber}</td></tr>
+                    <tr><td><strong>Trạng thái:</strong></td><td>${getStatusBadge(order.status)}</td></tr>
+                    <tr><td><strong>Ngày tạo:</strong></td><td>${formatDate(order.createdAt)}</td></tr>
+                    <tr><td><strong>Tổng tiền:</strong></td><td><strong>${formatCurrency(order.totalAmount)}</strong></td></tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h6>Thông tin khách hàng</h6>
+                <table class="table table-sm">
+                    <tr><td><strong>Tên:</strong></td><td>${order.customer.fullName}</td></tr>
+                    <tr><td><strong>Email:</strong></td><td>${order.customer.email}</td></tr>
+                    <tr><td><strong>Điện thoại:</strong></td><td>${order.customer.phoneNumber || 'N/A'}</td></tr>
+                    <tr><td><strong>Địa chỉ giao hàng:</strong></td><td>${order.shippingAddress}</td></tr>
+                </table>
+            </div>
+        </div>
+        
+        <h6>Sản phẩm đã đặt</h6>
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Sản phẩm</th>
+                        <th>Phân loại</th>
+                        <th>Số lượng</th>
+                        <th>Đơn giá</th>
+                        <th>Thành tiền</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${order.items.map(item => `
+                        <tr>
+                            <td>${item.productName}</td>
+                            <td>${item.variantInfo}</td>
+                            <td>${item.quantity}</td>
+                            <td>${formatCurrency(item.unitPrice)}</td>
+                            <td>${formatCurrency(item.totalPrice)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+        
+        ${order.payment ? `
+            <h6>Thông tin thanh toán</h6>
+            <table class="table table-sm">
+                <tr><td><strong>Phương thức:</strong></td><td>${order.payment.paymentMethod}</td></tr>
+                <tr><td><strong>Trạng thái:</strong></td><td>${order.payment.status}</td></tr>
+                <tr><td><strong>Mã giao dịch:</strong></td><td>${order.payment.transactionId || 'N/A'}</td></tr>
+            </table>
+        ` : ''}
+        
+        ${order.shipment ? `
+            <h6>Thông tin vận chuyển</h6>
+            <table class="table table-sm">
+                <tr><td><strong>Mã vận đơn:</strong></td><td>${order.shipment.trackingNumber}</td></tr>
+                <tr><td><strong>Đơn vị vận chuyển:</strong></td><td>${order.shipment.carrier}</td></tr>
+                <tr><td><strong>Trạng thái:</strong></td><td>${order.shipment.status}</td></tr>
+            </table>
+        ` : ''}
+    `;
+}
+
+async function updateOrderStatus(orderId, newStatus) {
+    if (!confirm(`Bạn có chắc muốn cập nhật trạng thái đơn hàng?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/admin/orders/${orderId}/status`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include', // Sử dụng cookie authentication
+            body: JSON.stringify(newStatus)
+        });
+
+        if (response.status === 401 || response.status === 403) {
+            window.location.href = '/Identity/Account/Login';
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error('Failed to update order status');
+        }
+
+        alert('Cập nhật trạng thái thành công!');
+        loadOrders(); // Reload the orders list
+    } catch (error) {
+        console.error('Error updating order status:', error);
+        alert('Lỗi khi cập nhật trạng thái đơn hàng');
+    }
+}
+
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND'
+    }).format(amount);
+}
+
+function formatDate(dateString) {
+    return new Date(dateString).toLocaleDateString('vi-VN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+</script>
+}
