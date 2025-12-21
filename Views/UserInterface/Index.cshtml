@@ -1,0 +1,126 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thư Viện Tài Liệu Mở</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <!-- Header -->
+    <header class="bg-white shadow-sm">
+        <div class="container mx-auto px-4 py-2 flex items-center justify-between">
+            <!-- Logo -->
+            <div class="flex items-center gap-4">
+                <button class="lg:hidden">
+                    <i class="fas fa-bars h-6 w-6"></i>
+                </button>
+                <a href="/" class="flex items-center">
+                    <img src="/logo.svg" alt="Logo" class="h-10 w-auto" />
+                </a>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="relative flex-1 max-w-xl mx-4">
+                <div class="relative">
+                    <input type="text"
+                           placeholder="Tìm kiếm tài liệu ..."
+                           class="w-full py-2 px-4 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-100" />
+                    <button class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500">
+                        <i class="fas fa-search h-5 w-5"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="hidden md:flex items-center gap-6">
+                <a href="/" class="text-blue-500 font-medium">TRANG CHỦ</a>
+                <a href="/about" class="text-gray-700 font-medium">HƯỚNG DẪN</a>
+                <a href="/library" class="text-gray-700 font-medium">ĐĂNG KÝ</a>
+                <a href="/admin" class="bg-blue-500 hover:bg-blue-600 text-white font-medium px-4 py-2 rounded-md">
+                    <span class="mr-2">⚙️</span> ĐĂNG NHẬP
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-6 flex">
+        <!-- Sidebar (Danh mục) -->
+        <aside class="w-1/4 pr-6">
+            <h2 class="text-lg font-bold text-blue-600 mb-4">DANH MỤC TÀI LIỆU</h2>
+            <ul class="space-y-2">
+                <li><a href="#" class="text-gray-700 hover:text-blue-500">TÀI LIỆU MỚI TOÁN</a></li>
+                <li><a href="#" class="text-gray-700 hover:text-blue-500">TÀI LIỆU MỚI VĂN</a></li>
+                <li><a href="#" class="text-gray-700 hover:text-blue-500">TÀI LIỆU MỚI HÓA HỌC</a></li>
+                <li><a href="#" class="text-gray-700 hover:text-blue-500">TÀI LIỆU MỚI SINH HỌC</a></li>
+                <li><a href="#" class="text-gray-700 hover:text-blue-500">TÀI LIỆU MỚI TIN HỌC</a></li>
+                <li><a href="#" class="text-gray-700 hover:text-blue-500">TÀI LIỆU MỚI CÔNG NGHỆ</a></li>
+                <li><a href="#" class="text-gray-700 hover:text-blue-500">TÀI LIỆU MỚI NGỮ VĂN</a></li>
+                <li><a href="#" class="text-gray-700 hover:text-blue-500">TÀI LIỆU MỚI LỊCH SỬ</a></li>
+                <li><a href="#" class="text-gray-700 hover:text-blue-500">TÀI LIỆU MỚI ĐỊA LÝ</a></li>
+                <li><a href="#" class="text-gray-700 hover:text-blue-500">TÀI LIỆU MỚI TIẾNG ANH</a></li>
+                <li><a href="#" class="text-gray-700 hover:text-blue-500">TÀI LIỆU TNXH, ĐẠO ĐỨC (GDCĐ)</a></li>
+                <li><a href="#" class="text-gray-700 hover:text-blue-500">TÀI LIỆU MỚI HĐTN, GDDP</a></li>
+                <li><a href="#" class="text-gray-700 hover:text-blue-500">TÀI LIỆU MỚI ÂM NHẠC - MĨ THUẬT</a></li>
+                <li><a href="#" class="text-gray-700 hover:text-blue-500">TÀI LIỆU TỔNG HỢP KHÁC</a></li>
+                <li><a href="#" class="text-gray-700 hover:text-blue-500">PHẦN MỀM TIẾNG ANH</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content (Danh sách tài liệu) -->
+        <main class="w-3/4">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-lg font-bold text-blue-600" id="document-count">XEM TẤT CẢ TÀI LIỆU</h2>
+                <div class="space-x-2">
+                    <button id="add-document-button" class="bg-orange-500 hover:bg-orange-600 text-black font-medium px-4 py-2 rounded-md">
+                        <i class="fas fa-plus mr-2"></i>THÊM TÀI LIỆU
+                    </button>
+                    <button class="bg-orange-500 hover:bg-orange-600 text-black font-medium px-4 py-2 rounded-md">TÀI LIỆU MỚI ĐĂNG</button>
+                    <button class="bg-orange-500 hover:bg-orange-600 text-black font-medium px-4 py-2 rounded-md">TÀI LIỆU BẢN QUYỀN</button>
+                </div>
+            </div>
+
+            <!-- Form thêm tài liệu (ẩn mặc định) -->
+            <div id="add-document-form" class="bg-white p-6 rounded-md shadow-sm mb-6 hidden">
+                <h3 class="text-lg font-bold mb-4">Thêm Tài Liệu Mới</h3>
+                <form id="add-form-inner">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-1">Tiêu đề:</label>
+                        <input type="text" id="title" class="w-full py-2 px-4 border border-gray-300 rounded-md" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-1">Tác giả:</label>
+                        <input type="text" id="author" class="w-full py-2 px-4 border border-gray-300 rounded-md" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-1">Định dạng:</label>
+                        <select id="format" class="w-full py-2 px-4 border border-gray-300 rounded-md" required>
+                            <option value="PPTX">PPTX</option>
+                            <option value="DOCX">DOCX</option>
+                            <option value="PDF">PDF</option>
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-1">Kích thước (MB):</label>
+                        <input type="number" id="size" step="0.01" class="w-full py-2 px-4 border border-gray-300 rounded-md" required>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md">Thêm</button>
+                        <button type="button" id="cancel-add-button" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md">Hủy</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Danh sách tài liệu -->
+            <div id="document-list" class="space-y-4">
+            </div>
+        </main>
+    </div>
+
+    <!-- Thêm script -->
+    <script src="/js/api.js"></script>
+    <script src="/js/ui.js"></script>
+</body>
+</html>
