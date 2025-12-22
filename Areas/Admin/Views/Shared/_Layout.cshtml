@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Admin Panel</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,.8);
+            padding: 12px 20px;
+            border-radius: 5px;
+            margin: 5px 10px;
+        }
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            background: rgba(255,255,255,.1);
+            color: #fff;
+        }
+        .sidebar .nav-link i {
+            width: 20px;
+            margin-right: 10px;
+        }
+        .main-content {
+            background: #f8f9fa;
+            min-height: 100vh;
+        }
+        .navbar-admin {
+            background: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-2 d-md-block sidebar p-0">
+                <div class="position-sticky pt-3">
+                    <div class="text-center mb-4">
+                        <h4 class="text-white">
+                            <i class="fas fa-shield-alt"></i> Admin Panel
+                        </h4>
+                    </div>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/Admin/DashboardView">
+                                <i class="fas fa-tachometer-alt"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/Admin/ProductsView">
+                                <i class="fas fa-box"></i> Sản phẩm
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/Admin/CategoriesView">
+                                <i class="fas fa-list"></i> Danh mục
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/Admin/OrdersView">
+                                <i class="fas fa-shopping-cart"></i> Đơn hàng
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/Admin/PromotionsView">
+                                <i class="fas fa-tags"></i> Khuyến mãi
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/Admin/InventoryView">
+                                <i class="fas fa-warehouse"></i> Tồn kho
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/Admin/ReportsView">
+                                <i class="fas fa-chart-bar"></i> Báo cáo
+                            </a>
+                        </li>
+                        <hr class="text-white">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/">
+                                <i class="fas fa-home"></i> Về trang chủ
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/Identity/Account/Logout">
+                                <i class="fas fa-sign-out-alt"></i> Đăng xuất
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-10 ms-sm-auto px-md-4 main-content">
+                <nav class="navbar navbar-admin navbar-expand-lg navbar-light mb-4">
+                    <div class="container-fluid">
+                        <span class="navbar-brand mb-0 h1">@ViewData["Title"]</span>
+                        <div class="d-flex">
+                            <span class="navbar-text">
+                                <i class="fas fa-user-circle"></i> @User.Identity.Name
+                            </span>
+                        </div>
+                    </div>
+                </nav>
+
+                <div class="py-4">
+                    @RenderBody()
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Highlight active menu
+        const currentPath = window.location.pathname;
+        document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+            if (link.getAttribute('href') === currentPath) {
+                link.classList.add('active');
+            }
+        });
+    </script>
+    
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
