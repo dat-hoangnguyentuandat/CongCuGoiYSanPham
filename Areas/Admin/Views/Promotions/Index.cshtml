@@ -1,0 +1,285 @@
+@{
+    ViewData["Title"] = "Quản lý khuyến mãi";
+}
+
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Quản lý khuyến mãi</h1>
+        <button class="btn btn-primary" onclick="showCreateModal()">
+            <i class="fas fa-plus"></i> Tạo khuyến mãi mới
+        </button>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="promotionsTable">
+                    <thead>
+                        <tr>
+                            <th>Mã</th>
+                            <th>Tên</th>
+                            <th>Loại giảm giá</th>
+                            <th>Giá trị</th>
+                            <th>Thời gian</th>
+                            <th>Trạng thái</th>
+                            <th>Đã sử dụng</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create/Edit Modal -->
+<div class="modal fade" id="promotionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Chi tiết khuyến mãi</h5>
+                <button type="button" class="close" onclick="closeModal()" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="promotionForm">
+                    <input type="hidden" id="promotionId">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Mã khuyến mãi *</label>
+                                <input type="text" class="form-control" id="promotionCode" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Tên khuyến mãi *</label>
+                                <input type="text" class="form-control" id="promotionName" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Mô tả</label>
+                        <textarea class="form-control" id="promotionDescription" rows="3"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Loại giảm giá *</label>
+                                <select class="form-control" id="discountType" required>
+                                    <option value="Percentage">Phần trăm (%)</option>
+                                    <option value="FixedAmount">Số tiền cố định (VND)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Giá trị giảm *</label>
+                                <input type="number" class="form-control" id="discountValue" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Đơn hàng tối thiểu</label>
+                                <input type="number" class="form-control" id="minOrderAmount">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Giảm tối đa</label>
+                                <input type="number" class="form-control" id="maxDiscountAmount">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Ngày bắt đầu *</label>
+                                <input type="datetime-local" class="form-control" id="startDate" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Ngày kết thúc *</label>
+                                <input type="datetime-local" class="form-control" id="endDate" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Giới hạn sử dụng</label>
+                        <input type="number" class="form-control" id="usageLimit" placeholder="Để trống = không giới hạn">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Hủy</button>
+                <button type="button" class="btn btn-primary" onclick="savePromotion()">Lưu</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        async function loadPromotions() {
+            const token = localStorage.getItem('token');
+            const response = await fetch('/api/admin/promotions', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const promotions = await response.json();
+
+            const tbody = document.querySelector('#promotionsTable tbody');
+            tbody.innerHTML = promotions.map(p => `
+                <tr>
+                    <td><code>${p.code}</code></td>
+                    <td>${p.name}</td>
+                    <td>${p.discountType === 'Percentage' ? 'Phần trăm' : 'Số tiền cố định'}</td>
+                    <td>${p.discountType === 'Percentage' ? p.discountValue + '%' : formatPrice(p.discountValue)}</td>
+                    <td>
+                        <small>${new Date(p.startDate).toLocaleDateString('vi-VN')}</small><br>
+                        <small>${new Date(p.endDate).toLocaleDateString('vi-VN')}</small>
+                    </td>
+                    <td>
+                        <span class="badge badge-${p.isActive ? 'success' : 'secondary'}">
+                            ${p.isActive ? 'Hoạt động' : 'Tạm dừng'}
+                        </span>
+                    </td>
+                    <td>${p.usageCount}${p.usageLimit ? '/' + p.usageLimit : ''}</td>
+                    <td>
+                        <button class="btn btn-sm btn-info" onclick="editPromotion(${p.id})">Sửa</button>
+                        <button class="btn btn-sm btn-${p.isActive ? 'warning' : 'success'}" onclick="togglePromotion(${p.id})">
+                            ${p.isActive ? 'Tạm dừng' : 'Kích hoạt'}
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deletePromotion(${p.id})">Xóa</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function showCreateModal() {
+            document.getElementById('promotionForm').reset();
+            document.getElementById('promotionId').value = '';
+            document.querySelector('.modal-title').textContent = 'Tạo khuyến mãi mới';
+            $('#promotionModal').modal('show');
+        }
+
+        async function editPromotion(id) {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`/api/admin/promotions/${id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const promotion = await response.json();
+
+            document.getElementById('promotionId').value = promotion.id;
+            document.getElementById('promotionCode').value = promotion.code;
+            document.getElementById('promotionName').value = promotion.name;
+            document.getElementById('promotionDescription').value = promotion.description;
+            document.getElementById('discountType').value = promotion.discountType;
+            document.getElementById('discountValue').value = promotion.discountValue;
+            document.getElementById('minOrderAmount').value = promotion.minOrderAmount || '';
+            document.getElementById('maxDiscountAmount').value = promotion.maxDiscountAmount || '';
+            document.getElementById('startDate').value = new Date(promotion.startDate).toISOString().slice(0, 16);
+            document.getElementById('endDate').value = new Date(promotion.endDate).toISOString().slice(0, 16);
+            document.getElementById('usageLimit').value = promotion.usageLimit || '';
+
+            document.querySelector('.modal-title').textContent = 'Chỉnh sửa khuyến mãi';
+            $('#promotionModal').modal('show');
+        }
+
+        async function savePromotion() {
+            const form = document.getElementById('promotionForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const id = document.getElementById('promotionId').value;
+            const data = {
+                code: document.getElementById('promotionCode').value,
+                name: document.getElementById('promotionName').value,
+                description: document.getElementById('promotionDescription').value,
+                discountType: document.getElementById('discountType').value,
+                discountValue: parseFloat(document.getElementById('discountValue').value),
+                minOrderAmount: parseFloat(document.getElementById('minOrderAmount').value) || null,
+                maxDiscountAmount: parseFloat(document.getElementById('maxDiscountAmount').value) || null,
+                startDate: document.getElementById('startDate').value,
+                endDate: document.getElementById('endDate').value,
+                usageLimit: parseInt(document.getElementById('usageLimit').value) || null
+            };
+
+            const token = localStorage.getItem('token');
+            const url = id ? `/api/admin/promotions/${id}` : '/api/admin/promotions';
+            const method = id ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                $('#promotionModal').modal('hide');
+                loadPromotions();
+                alert(id ? 'Cập nhật thành công!' : 'Tạo khuyến mãi thành công!');
+            } else {
+                alert('Có lỗi xảy ra!');
+            }
+        }
+
+        async function togglePromotion(id) {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`/api/admin/promotions/${id}/toggle`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                loadPromotions();
+            }
+        }
+
+        async function deletePromotion(id) {
+            if (!confirm('Bạn có chắc muốn xóa khuyến mãi này?')) return;
+
+            const token = localStorage.getItem('token');
+            const response = await fetch(`/api/admin/promotions/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                loadPromotions();
+                alert('Xóa thành công!');
+            }
+        }
+
+        function formatPrice(price) {
+            return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+        }
+
+        // Close modal function
+        function closeModal() {
+            $('#promotionModal').modal('hide');
+        }
+
+        // Initialize
+        $(document).ready(function() {
+            loadPromotions();
+
+            // Handle modal close events
+            $('#promotionModal').on('hidden.bs.modal', function () {
+                document.getElementById('promotionForm').reset();
+            });
+        });
+
+        loadPromotions();
+    </script>
+}
